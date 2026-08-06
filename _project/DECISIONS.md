@@ -27,6 +27,29 @@ Write decisions where someone smart would reasonably pick differently.
 
 ## Entries
 
+## 2026-08-06 — All UI art is generated, not sourced
+
+**Decision:** every visual asset (walnut, panel, knobs, screws) is rendered by
+`scripts/generate_ui_assets.py` (numpy/PIL, committed PNGs) using the classic
+filmstrip technique — 101 frames per knob, fixed lighting, rotating pointer.
+**Context:** the brief asked for photoreal vintage knobs; stock images carry
+license risk and can't be re-tuned.
+**Alternatives considered:** procedural drawing in JUCE Graphics (looked flat,
+per-frame cost at paint time); commissioned/stock art (license + iteration
+friction); SVG (can't do photoreal shading well).
+**Tradeoffs:** ~2.5 MB of PNGs in the repo/binary; regenerating needs the
+`.venv-assets` python env.
+**Revisit if:** a designer supplies real hardware photography, or binary size
+starts to matter.
+
+## 2026-08-06 — Quality switches wait for silence instead of crossfading
+
+**Decision:** a quality-mode change is deferred until no voices are active.
+**Context:** §12 demands click-free switches; crossfading two prepared render
+paths doubles voice CPU during transitions and complicates state.
+**Tradeoffs:** the change doesn't take effect while notes are held.
+**Revisit if:** users complain; the crossfade design is the proper fix.
+
 ## 2026-08-05 — JUCE 8.0.15, not 9.0.0
 
 **Decision:** pin JUCE to exact tag 8.0.15 via CMake FetchContent.
