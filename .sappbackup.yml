@@ -1,0 +1,15 @@
+# .sappbackup.yml — auto-created by reconcile-configs.sh.
+# Default coverage: source code + _project docs → B2 hot tier, daily.
+# Adjust artifacts (add a db dump, media, cold-tier archive) as needed.
+schema: 1
+project_id: sappsynth
+artifacts:
+  - name: code
+    type: git_tarball
+    source: .
+    tier: hot
+  - name: docs
+    type: project_docs
+    source: _project
+    tier: hot
+schedule: daily
