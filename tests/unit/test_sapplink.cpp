@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
+#include <cctype>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -30,7 +31,12 @@ std::vector<ManifestRow> loadManifest(const std::string& path)
     REQUIRE(file.good());
     std::stringstream ss;
     ss << file.rdbuf();
-    const std::string text = ss.str();
+    // Whitespace-agnostic: sapptune may reformat the JSON (indented or
+    // compact) without changing meaning.
+    std::string text;
+    for (const char c : ss.str())
+        if (!std::isspace(static_cast<unsigned char>(c)))
+            text += c;
 
     auto grabString = [](const std::string& obj, const std::string& key)
     {
@@ -43,7 +49,7 @@ std::vector<ManifestRow> loadManifest(const std::string& path)
 
     std::vector<ManifestRow> rows;
     std::size_t pos = text.find("\"parameters\"");
-    while ((pos = text.find("{ \"id\"", pos)) != std::string::npos)
+    while ((pos = text.find("{\"id\"", pos)) != std::string::npos)
     {
         const auto end = text.find('}', pos);
         const std::string obj = text.substr(pos, end - pos);
