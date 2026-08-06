@@ -14,6 +14,14 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-08-06 — SappLink CC-in
+
+- Fixed CC->parameter mapping per the sapptune SappLink manifest (20 CCs,
+  any channel), slewed ~15 ms, applied via the host-automation path.
+- Table-driven (SappLinkCCMap.cpp) + manifest-drift test vs vendored JSON.
+- 8 manifest range corrections reported to sapptune (docs/sapplink.md).
+- End-to-end render proof: SappUiShot --cctest (CC 74 sweep brightens).
+
 ## 2026-08-06 — v0.5.0: preset browser + 75 presets (released with Analog DNA)
 
 - Searchable scrollable preset browser (filter by name/category).

@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <array>
 #include <vector>
 #include "../engine/SynthEngine.h"
 
@@ -57,6 +58,20 @@ private:
     SynthEngine engine;
     std::vector<Event> eventScratch;
     bool seedLocked { false };
+
+    // SappLink CC-in slew: CC steps land as targets; each block moves the
+    // parameter a fraction of the way so 7-bit steps don't zipper. Parameter
+    // pointers resolve once in the constructor (audio thread stays lookup-free).
+    struct CcSlew
+    {
+        juce::RangedAudioParameter* parameter { nullptr };
+        float target { 0.0f };
+        float current { 0.0f };
+        bool active { false };
+    };
+    std::array<CcSlew, 20> ccSlews;
+    void handleSappLinkCc(int ccNumber, int ccValue);
+    void advanceCcSlews(int numSamples, double sampleRate);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SappSynthProcessor)
 };

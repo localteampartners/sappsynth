@@ -70,7 +70,8 @@ Host/DAW (or Standalone)
 
 ## External touchpoints
 
-- None at runtime. Build-time: GitHub (JUCE, Catch2 via FetchContent).
+- SappLink CC-in: sapptune-rendered MIDI CC automation drives 20 parameters (docs/sapplink.md; manifest lives in ~/apps/sapptune).
+- Build-time: GitHub (JUCE, Catch2 via FetchContent).
 
 ## Known sharp edges
 

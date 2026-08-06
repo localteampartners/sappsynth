@@ -51,8 +51,12 @@ if(SAPPSYNTH_BUILD_TESTS)
     tests/unit/test_effects.cpp
     tests/unit/test_arp.cpp
     tests/unit/test_dna.cpp
+    tests/unit/test_sapplink.cpp
+    source/plugin/SappLinkCCMap.cpp
   )
   target_link_libraries(sappsynth_tests PRIVATE sappsynth_core Catch2::Catch2WithMain)
+  target_compile_definitions(sappsynth_tests PRIVATE
+    SAPPSYNTH_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
   sappsynth_set_warnings(sappsynth_tests)
 
   enable_testing()
@@ -111,6 +115,7 @@ if(SAPPSYNTH_BUILD_PLUGIN)
     source/plugin/PluginProcessor.cpp
     source/plugin/PluginEditor.cpp
     source/plugin/FactoryPresets.cpp
+    source/plugin/SappLinkCCMap.cpp
   )
   target_link_libraries(SappSynthPlugin PRIVATE
     sappsynth_core
@@ -136,6 +141,7 @@ if(SAPPSYNTH_BUILD_PLUGIN)
       source/plugin/PluginProcessor.cpp
       source/plugin/PluginEditor.cpp
       source/plugin/FactoryPresets.cpp
+      source/plugin/SappLinkCCMap.cpp
     )
     target_include_directories(SappUiShot PRIVATE source/plugin)
     target_link_libraries(SappUiShot PRIVATE

@@ -1,0 +1,28 @@
+{
+  "sapplink": "1.0",
+  "name": "sappsynth",
+  "kind": "synth",
+  "midi": { "channelPolicy": "any", "polyphony": 16, "pitchBendRangeSemitones": 2 },
+  "parameters": [
+    { "id": "filter.cutoff.hz",     "label": "Cutoff",         "cc": 74, "range": [20, 20000],   "curve": "log" },
+    { "id": "filter.resonance",     "label": "Resonance",      "cc": 71, "range": [0, 1],        "curve": "linear" },
+    { "id": "filter.envAmount",     "label": "Filter Env Amt", "cc": 24, "range": [-1, 1],       "curve": "linear" },
+    { "id": "env.amp.attack",       "label": "Amp Attack",     "cc": 73, "range": [0.001, 5],    "curve": "log" },
+    { "id": "env.amp.release",      "label": "Amp Release",    "cc": 72, "range": [0.001, 5],    "curve": "log" },
+    { "id": "voice.glide.s",        "label": "Glide",          "cc": 5,  "range": [0, 1],        "curve": "linear" },
+    { "id": "lfo.rate.hz",          "label": "LFO Rate",       "cc": 76, "range": [0.02, 20],    "curve": "log" },
+    { "id": "lfo.toCutoff",         "label": "LFO-Cutoff",     "cc": 77, "range": [0, 1],        "curve": "linear" },
+    { "id": "lfo.toPitch.cents",    "label": "LFO-Pitch",      "cc": 78, "range": [0, 100],      "curve": "linear" },
+    { "id": "mixer.drive",          "label": "Drive",          "cc": 25, "range": [1, 8],        "curve": "log" },
+    { "id": "fx.chorus.mix",        "label": "Chorus Mix",     "cc": 93, "range": [0, 1],        "curve": "linear" },
+    { "id": "fx.delay.mix",         "label": "Delay Mix",      "cc": 94, "range": [0, 1],        "curve": "linear" },
+    { "id": "fx.delay.feedback",    "label": "Delay Feedback", "cc": 95, "range": [0, 0.85],     "curve": "linear" },
+    { "id": "fx.reverb.mix",        "label": "Reverb Mix",     "cc": 91, "range": [0, 1],        "curve": "linear" },
+    { "id": "fx.reverb.size",       "label": "Reverb Size",    "cc": 92, "range": [0, 1],        "curve": "linear" },
+    { "id": "variation.driftCents", "label": "Drift Amount",   "cc": 26, "range": [0, 10],       "curve": "linear" },
+    { "id": "variation.driftRate",  "label": "Drift Rate",     "cc": 27, "range": [0, 1],        "curve": "linear" },
+    { "id": "arp.rate.hz",          "label": "Arp Rate",       "cc": 28, "range": [0.5, 20],     "curve": "log" },
+    { "id": "arp.gate",             "label": "Arp Gate",       "cc": 29, "range": [0.05, 0.95],  "curve": "linear" },
+    { "id": "output.master.db",     "label": "Master",         "cc": 7,  "range": [-40, 6],      "curve": "linear" }
+  ]
+}

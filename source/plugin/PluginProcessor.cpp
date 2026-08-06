@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "../parameters/ParameterIds.h"
+#include "SappLinkCCMap.h"
 
 namespace sappsynth {
 
@@ -28,6 +29,45 @@ SappSynthProcessor::SappSynthProcessor()
 {
     eventScratch.reserve(1024);
     engine.setUnitSeed(0x5A995EEDull);
+
+    const auto& table = sapplink::mappings();
+    for (std::size_t i = 0; i < table.size(); ++i)
+        ccSlews[i].parameter = apvts.getParameter(table[i].paramId);
+}
+
+void SappSynthProcessor::handleSappLinkCc(int ccNumber, int ccValue)
+{
+    const auto* mapping = sapplink::findMapping(ccNumber);
+    if (mapping == nullptr)
+        return;
+    const auto index = static_cast<std::size_t>(mapping - sapplink::mappings().data());
+    auto& slew = ccSlews[index];
+    if (slew.parameter == nullptr)
+        return;
+    slew.target = slew.parameter->convertTo0to1(sapplink::ccToEngineering(*mapping, ccValue));
+    if (!slew.active)
+        slew.current = slew.parameter->getValue();
+    slew.active = true;
+}
+
+void SappSynthProcessor::advanceCcSlews(int numSamples, double sampleRate)
+{
+    // ~15 ms approach per step; applied through the same normalized-value
+    // path host automation uses, never straight into the DSP.
+    const float coefficient = 1.0f - std::exp(-static_cast<float>(numSamples)
+                                              / (0.015f * static_cast<float>(sampleRate)));
+    for (auto& slew : ccSlews)
+    {
+        if (!slew.active || slew.parameter == nullptr)
+            continue;
+        slew.current += (slew.target - slew.current) * coefficient;
+        if (std::abs(slew.target - slew.current) < 1.0e-4f)
+        {
+            slew.current = slew.target;
+            slew.active = false;
+        }
+        slew.parameter->setValueNotifyingHost(slew.current);
+    }
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLayout()
@@ -264,6 +304,13 @@ void SappSynthProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         {
             event.type = Event::Type::AllNotesOff;
         }
+        else if (message.isController())
+        {
+            // SappLink CC-in (any channel). CC 1/64 and pitch bend fall
+            // through untouched — they are not part of the mapping.
+            handleSappLinkCc(message.getControllerNumber(), message.getControllerValue());
+            continue;
+        }
         else
             continue;
         if (eventScratch.size() < eventScratch.capacity())
@@ -271,6 +318,7 @@ void SappSynthProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     }
     midi.clear();
 
+    advanceCcSlews(numSamples, getSampleRate());
     engine.setPatch(buildPatchFromParameters());
 
     RenderBlock block;
