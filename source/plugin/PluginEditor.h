@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "PluginProcessor.h"
+#include "FactoryPresets.h"
 
 namespace sappsynth {
 
@@ -55,6 +56,28 @@ private:
     int lastActiveVoice { -1 };
 };
 
+// Searchable, scrollable preset browser overlay: type to filter across name
+// and category, click to load. Replaces the old ComboBox menu.
+class PresetBrowser : public juce::Component, private juce::ListBoxModel
+{
+public:
+    PresetBrowser();
+    std::function<void(int)> onPresetChosen; // index into presets::all()
+    void resized() override;
+    void paint(juce::Graphics&) override;
+    void visibilityChanged() override;
+
+private:
+    int getNumRows() override { return static_cast<int>(filtered.size()); }
+    void paintListBoxItem(int row, juce::Graphics&, int w, int h, bool selected) override;
+    void listBoxItemClicked(int row, const juce::MouseEvent&) override;
+    void refilter();
+
+    juce::TextEditor searchBox;
+    juce::ListBox list { "presets", this };
+    std::vector<int> filtered;
+};
+
 class SappSynthEditor : public juce::AudioProcessorEditor
 {
 public:
@@ -101,7 +124,8 @@ private:
     std::vector<std::unique_ptr<Chooser>> choosers;
     std::vector<Section> sections;
 
-    juce::ComboBox presetBox;
+    juce::TextButton presetButton { "PRESETS" };
+    PresetBrowser presetBrowser;
     juce::TextButton newUnitButton { "NEW UNIT" };
     juce::TextButton lockButton { "LOCK" };
     juce::Label seedLabel;

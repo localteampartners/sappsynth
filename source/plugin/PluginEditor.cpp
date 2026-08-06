@@ -353,219 +353,90 @@ void LabPanel::paint(juce::Graphics& g)
 }
 
 // ------------------------------------------------------------------ editor --
-namespace {
-
-struct PresetValue { const char* id; float value; };
-struct Preset { const char* name; const char* category; std::vector<PresetValue> values; };
-
-const std::vector<Preset>& factoryPresets()
+// ------------------------------------------------------------ preset browser
+PresetBrowser::PresetBrowser()
 {
-    namespace p = param;
-    static const std::vector<Preset> presets {
-        { "Init", "INIT", {} },
+    searchBox.setTextToShowWhenEmpty("SEARCH...", juce::Colour(0xff7d8494));
+    searchBox.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff121316));
+    searchBox.setColour(juce::TextEditor::textColourId, colours::cream);
+    searchBox.setColour(juce::TextEditor::outlineColourId, colours::engrave);
+    searchBox.setColour(juce::TextEditor::focusedOutlineColourId, colours::amber.withAlpha(0.6f));
+    searchBox.setColour(juce::CaretComponent::caretColourId, colours::amber);
+    searchBox.setFont(vintageFont(13.0f));
+    searchBox.onTextChange = [this] { refilter(); };
+    addAndMakeVisible(searchBox);
 
-        // ---- BASS ----
-        { "Acid Bass", "BASS", {
-            { p::cutoff, 240.0f }, { p::resonance, 0.88f }, { p::filterEnvAmt, 0.75f },
-            { p::filtDecay, 0.18f }, { p::filtSustain, 0.0f }, { p::keyTrack, 0.8f },
-            { p::filterDrive, 10.0f }, { p::subLevel, 0.4f }, { p::ampDecay, 0.3f },
-            { p::ampRelease, 0.12f }, { p::polyphony, 1.0f }, { p::filterVel, 0.6f },
-            { p::glide, 0.06f }, { p::delayMix, 0.22f }, { p::delayTime, 0.19f },
-            { p::delayFeedback, 0.45f } } },
-        { "Model Growl", "BASS", {
-            { p::osc2Level, 0.9f }, { p::osc2Fine, -8.0f }, { p::subLevel, 0.6f },
-            { p::cutoff, 350.0f }, { p::resonance, 0.25f }, { p::filterEnvAmt, 0.55f },
-            { p::filtDecay, 0.25f }, { p::filtSustain, 0.1f }, { p::keyTrack, 0.4f },
-            { p::mixerDrive, 3.5f }, { p::filterDrive, 8.0f }, { p::character, 0.8f },
-            { p::polyphony, 1.0f }, { p::glide, 0.04f }, { p::ampRelease, 0.2f } } },
-        { "Taurus Rumble", "BASS", {
-            { p::osc1Octave, -1.0f }, { p::subOctave, 1.0f }, { p::subLevel, 0.8f },
-            { p::cutoff, 200.0f }, { p::mixerDrive, 3.0f }, { p::outputDrive, 6.0f },
-            { p::polyphony, 1.0f }, { p::glide, 0.08f }, { p::ampRelease, 0.4f },
-            { p::character, 0.9f }, { p::filterEnvAmt, 0.3f }, { p::filtDecay, 0.4f } } },
-
-        // ---- LEAD ----
-        { "Fat Fifth Lead", "LEAD", {
-            { p::osc2Semi, 7.0f }, { p::osc2Level, 0.9f }, { p::cutoff, 2500.0f },
-            { p::resonance, 0.3f }, { p::polyphony, 1.0f }, { p::glide, 0.05f },
-            { p::character, 0.7f }, { p::delayMix, 0.25f }, { p::unisonCount, 2.0f },
-            { p::unisonDetune, 8.0f }, { p::filterVel, 0.4f } } },
-        { "Lucky Lead", "LEAD", {
-            { p::osc2Level, 0.9f }, { p::osc2Fine, 6.0f }, { p::unisonCount, 3.0f },
-            { p::unisonDetune, 10.0f }, { p::cutoff, 1800.0f }, { p::filterEnvAmt, 0.4f },
-            { p::filterVel, 0.5f }, { p::ampDecay, 0.5f }, { p::delayMix, 0.2f },
-            { p::character, 0.6f } } },
-        { "Hoover Rave", "LEAD", {
-            { p::osc2Wave, 2.0f }, { p::osc2Pw, 0.4f }, { p::osc2Level, 0.9f },
-            { p::unisonCount, 5.0f }, { p::unisonDetune, 35.0f }, { p::unisonSpread, 1.0f },
-            { p::cutoff, 3000.0f }, { p::glide, 0.15f }, { p::chorusMix, 0.4f },
-            { p::ampAttack, 0.02f }, { p::character, 0.6f }, { p::polyphony, 10.0f } } },
-        { "Whistle (Self-Osc)", "LEAD", {
-            { p::osc1Level, 0.0f }, { p::noiseLevel, 0.06f }, { p::cutoff, 880.0f },
-            { p::resonance, 1.0f }, { p::keyTrack, 1.0f }, { p::filterEnvAmt, 0.0f },
-            { p::ampAttack, 0.02f }, { p::ampRelease, 0.5f }, { p::quality, 2.0f },
-            { p::reverbMix, 0.35f } } },
-
-        // ---- KEYS ----
-        { "Juno Chorus Keys", "KEYS", {
-            { p::subLevel, 0.5f }, { p::cutoff, 4500.0f }, { p::ampAttack, 0.01f },
-            { p::ampDecay, 0.4f }, { p::ampSustain, 0.6f }, { p::chorusMix, 0.6f },
-            { p::character, 0.6f }, { p::filterVel, 0.4f }, { p::ampRelease, 0.3f } } },
-        { "Vintage Organ", "KEYS", {
-            { p::osc1Wave, 0.0f }, { p::osc2Wave, 0.0f }, { p::osc2Octave, 1.0f },
-            { p::osc2Level, 0.5f }, { p::subWave, 1.0f }, { p::subLevel, 0.8f },
-            { p::cutoff, 8000.0f }, { p::ampAttack, 0.005f }, { p::ampSustain, 1.0f },
-            { p::ampRelease, 0.06f }, { p::chorusMix, 0.3f }, { p::character, 0.5f } } },
-        { "Punchy Pluck", "KEYS", {
-            { p::osc2Wave, 2.0f }, { p::osc2Semi, -12.0f }, { p::osc2Level, 0.6f },
-            { p::cutoff, 900.0f }, { p::resonance, 0.35f }, { p::filterEnvAmt, 0.8f },
-            { p::filtDecay, 0.12f }, { p::filtSustain, 0.0f }, { p::ampDecay, 0.35f },
-            { p::ampSustain, 0.0f }, { p::ampRelease, 0.25f }, { p::keyTrack, 1.0f },
-            { p::filterVel, 0.6f }, { p::character, 0.6f }, { p::delayMix, 0.18f } } },
-        { "Warm Brass", "KEYS", {
-            { p::osc2Level, 0.85f }, { p::osc2Fine, 4.0f }, { p::cutoff, 750.0f },
-            { p::resonance, 0.15f }, { p::filterEnvAmt, 0.45f }, { p::filtDecay, 0.35f },
-            { p::filtSustain, 0.4f }, { p::ampAttack, 0.04f }, { p::ampRelease, 0.3f },
-            { p::mixerDrive, 2.2f }, { p::character, 0.7f }, { p::driftAmount, 2.0f },
-            { p::chorusMix, 0.2f }, { p::reverbMix, 0.18f } } },
-
-        // ---- FM ----
-        { "FM E-Piano", "FM", {
-            { p::osc1Wave, 0.0f }, { p::osc2Wave, 0.0f }, { p::osc2Octave, 1.0f },
-            { p::osc2Semi, 7.0f }, { p::osc2Level, 0.0f }, { p::osc2Fm, 0.35f },
-            { p::cutoff, 8000.0f }, { p::ampDecay, 0.8f }, { p::ampSustain, 0.3f },
-            { p::ampRelease, 0.4f }, { p::filterVel, 0.5f }, { p::character, 0.4f },
-            { p::reverbMix, 0.15f }, { p::chorusMix, 0.25f } } },
-        { "FM Bells", "FM", {
-            { p::osc1Wave, 0.0f }, { p::osc2Wave, 0.0f }, { p::osc2Octave, 1.0f },
-            { p::osc2Semi, 7.0f }, { p::osc2Fine, 30.0f }, { p::osc2Level, 0.0f },
-            { p::osc2Fm, 0.5f }, { p::cutoff, 12000.0f }, { p::ampAttack, 0.005f },
-            { p::ampDecay, 1.5f }, { p::ampSustain, 0.0f }, { p::ampRelease, 1.5f },
-            { p::reverbMix, 0.4f }, { p::reverbSize, 0.7f }, { p::character, 0.3f } } },
-        { "Glass Clang", "FM", {
-            { p::osc1Wave, 3.0f }, { p::osc2Wave, 2.0f }, { p::osc2Octave, 1.0f },
-            { p::osc2Semi, 6.0f }, { p::osc2Level, 0.2f }, { p::osc2Fm, 0.7f },
-            { p::mixerDrive, 2.0f }, { p::cutoff, 9000.0f }, { p::ampDecay, 0.6f },
-            { p::ampSustain, 0.0f }, { p::ampRelease, 0.5f }, { p::delayMix, 0.3f } } },
-        { "Metal Drone", "FM", {
-            { p::osc2Octave, -1.0f }, { p::osc2Fine, 13.0f }, { p::osc2Level, 0.5f },
-            { p::osc2Fm, 0.9f }, { p::resonance, 0.5f }, { p::cutoff, 1200.0f },
-            { p::character, 1.0f }, { p::driftAmount, 4.0f }, { p::reverbMix, 0.5f },
-            { p::ampAttack, 0.5f }, { p::ampRelease, 2.0f }, { p::quality, 2.0f } } },
-
-        // ---- PAD / STRINGS ----
-        { "Drift Pad", "PAD", {
-            { p::osc2Level, 0.9f }, { p::osc2Fine, 9.0f }, { p::subLevel, 0.5f },
-            { p::cutoff, 1600.0f }, { p::ampAttack, 0.6f }, { p::ampRelease, 1.2f },
-            { p::filtAttack, 0.8f }, { p::filterEnvAmt, 0.3f }, { p::character, 1.0f },
-            { p::driftAmount, 4.0f }, { p::driftSpeed, 0.3f }, { p::warmup, 0.4f },
-            { p::quality, 2.0f }, { p::reverbMix, 0.42f }, { p::reverbSize, 0.8f },
-            { p::delayMix, 0.18f }, { p::delayTime, 0.55f } } },
-        { "Jupiter Sweep Pad", "PAD", {
-            { p::osc2Level, 0.9f }, { p::osc2Fine, 5.0f }, { p::osc1Fine, -5.0f },
-            { p::cutoff, 900.0f }, { p::lfoToCutoff, 0.35f }, { p::lfoRate, 0.15f },
-            { p::ampAttack, 0.8f }, { p::ampRelease, 1.6f }, { p::chorusMix, 0.45f },
-            { p::reverbMix, 0.35f }, { p::character, 0.8f }, { p::polyphony, 16.0f },
-            { p::unisonCount, 2.0f }, { p::unisonDetune, 9.0f } } },
-        { "PWM Strings", "PAD", {
-            { p::osc1Wave, 2.0f }, { p::osc1Pw, 0.32f }, { p::osc2Wave, 2.0f },
-            { p::osc2Pw, 0.68f }, { p::osc2Fine, -6.0f }, { p::osc2Level, 0.8f },
-            { p::cutoff, 3800.0f }, { p::ampAttack, 0.25f }, { p::ampRelease, 0.8f },
-            { p::lfoRate, 0.8f }, { p::lfoToPitch, 3.0f }, { p::character, 0.8f },
-            { p::driftAmount, 2.5f }, { p::chorusMix, 0.5f }, { p::reverbMix, 0.3f } } },
-        { "Polysix Strings", "PAD", {
-            { p::osc1Wave, 2.0f }, { p::osc1Pw, 0.35f }, { p::osc2Wave, 2.0f },
-            { p::osc2Pw, 0.65f }, { p::osc2Fine, -4.0f }, { p::osc2Level, 0.85f },
-            { p::cutoff, 3200.0f }, { p::ampAttack, 0.35f }, { p::ampRelease, 1.0f },
-            { p::chorusMix, 0.55f }, { p::reverbMix, 0.25f }, { p::lfoToPitch, 2.0f },
-            { p::lfoRate, 0.7f }, { p::character, 0.7f } } },
-        { "Super Saw Stack", "PAD", {
-            { p::osc2Level, 0.9f }, { p::osc2Fine, -7.0f }, { p::unisonCount, 5.0f },
-            { p::unisonDetune, 22.0f }, { p::unisonSpread, 0.9f }, { p::cutoff, 5200.0f },
-            { p::ampAttack, 0.02f }, { p::ampRelease, 0.5f }, { p::character, 0.7f },
-            { p::chorusMix, 0.25f }, { p::reverbMix, 0.22f }, { p::polyphony, 16.0f } } },
-        { "Tape Flute", "PAD", {
-            { p::osc1Wave, 0.0f }, { p::osc1Level, 0.9f }, { p::noiseLevel, 0.05f },
-            { p::cutoff, 3000.0f }, { p::glide, 0.12f }, { p::character, 1.0f },
-            { p::driftAmount, 5.0f }, { p::driftSpeed, 0.6f }, { p::warmup, 0.6f },
-            { p::ampAttack, 0.08f }, { p::reverbMix, 0.3f }, { p::polyphony, 1.0f } } },
-
-        // ---- DNA (demonstration presets, dna.md: effects minimal) ----
-        { "Ideal Mono Bass", "DNA", {
-            { p::character, 0.0f }, { p::cutoff, 500.0f }, { p::subLevel, 0.5f },
-            { p::polyphony, 1.0f }, { p::filterEnvAmt, 0.4f }, { p::filtDecay, 0.3f } } },
-        { "Analog DNA Mono Bass", "DNA", {
-            { p::character, 0.8f }, { p::dnaCondition, 0.5f }, { p::dnaWarmth, 0.6f },
-            { p::dnaAge, 0.4f }, { p::cutoff, 500.0f }, { p::subLevel, 0.5f },
-            { p::polyphony, 1.0f }, { p::filterEnvAmt, 0.4f }, { p::filtDecay, 0.3f } } },
-        { "Warm Oscillator Lead", "DNA", {
-            { p::character, 0.9f }, { p::dnaWarmth, 0.9f }, { p::dnaCalibration, 0.6f },
-            { p::osc2Level, 0.85f }, { p::osc2Fine, 5.0f }, { p::cutoff, 2200.0f },
-            { p::polyphony, 1.0f }, { p::glide, 0.04f } } },
-        { "Aging Poly Chords", "DNA", {
-            { p::character, 1.0f }, { p::dnaAge, 0.9f }, { p::dnaCondition, 0.8f },
-            { p::dnaCalibration, 0.4f }, { p::osc2Level, 0.8f }, { p::cutoff, 2800.0f },
-            { p::ampAttack, 0.05f }, { p::ampRelease, 0.6f }, { p::polyphony, 16.0f } } },
-        { "Voice Round-Robin Keys", "DNA", {
-            { p::character, 1.0f }, { p::dnaCalibration, 0.3f }, { p::dnaCondition, 0.7f },
-            { p::cutoff, 3500.0f }, { p::ampDecay, 0.5f }, { p::ampSustain, 0.4f },
-            { p::filterVel, 0.5f } } },
-        { "Driven Ladder Bass", "DNA", {
-            { p::character, 0.7f }, { p::dnaWarmth, 1.0f }, { p::mixerDrive, 5.0f },
-            { p::filterDrive, 14.0f }, { p::cutoff, 420.0f }, { p::resonance, 0.5f },
-            { p::subLevel, 0.5f }, { p::polyphony, 1.0f }, { p::filtDecay, 0.25f },
-            { p::filterEnvAmt, 0.5f } } },
-        { "Soft Supply Pad", "DNA", {
-            { p::character, 0.9f }, { p::dnaSupply, 0.05f }, { p::dnaWarmth, 0.5f },
-            { p::osc2Level, 0.9f }, { p::osc2Fine, 7.0f }, { p::cutoff, 1800.0f },
-            { p::ampAttack, 0.4f }, { p::ampRelease, 1.0f }, { p::polyphony, 16.0f },
-            { p::unisonCount, 2.0f } } },
-        { "Worn Calibration Brass", "DNA", {
-            { p::character, 1.0f }, { p::dnaCondition, 1.0f }, { p::dnaCalibration, 0.1f },
-            { p::dnaAge, 0.7f }, { p::osc2Level, 0.85f }, { p::cutoff, 900.0f },
-            { p::filterEnvAmt, 0.45f }, { p::filtSustain, 0.4f }, { p::ampAttack, 0.05f } } },
-        { "Clean vs Saturated Seq", "DNA", {
-            { p::character, 0.6f }, { p::dnaWarmth, 0.95f }, { p::arpMode, 1.0f },
-            { p::arpRate, 8.0f }, { p::arpOctaves, 2.0f }, { p::arpGate, 0.45f },
-            { p::cutoff, 1000.0f }, { p::resonance, 0.4f }, { p::filterEnvAmt, 0.5f },
-            { p::filtDecay, 0.15f }, { p::filtSustain, 0.0f }, { p::ampSustain, 0.5f } } },
-        { "Maximum DNA Demo", "DNA", {
-            { p::character, 1.0f }, { p::dnaCondition, 1.0f }, { p::dnaCalibration, 0.0f },
-            { p::dnaWarmth, 1.0f }, { p::dnaSupply, 0.0f }, { p::dnaAge, 1.0f },
-            { p::driftAmount, 6.0f }, { p::warmup, 1.0f }, { p::osc2Level, 0.9f },
-            { p::cutoff, 2000.0f }, { p::polyphony, 16.0f } } },
-
-        // ---- ARP ----
-        { "Berlin School", "ARP", {
-            { p::arpMode, 3.0f }, { p::arpRate, 6.0f }, { p::arpOctaves, 2.0f },
-            { p::arpGate, 0.55f }, { p::subLevel, 0.4f }, { p::cutoff, 1100.0f },
-            { p::resonance, 0.45f }, { p::filterEnvAmt, 0.5f }, { p::filtDecay, 0.15f },
-            { p::filtSustain, 0.2f }, { p::delayMix, 0.35f }, { p::delayTime, 0.375f },
-            { p::delayFeedback, 0.55f }, { p::character, 0.7f }, { p::ampRelease, 0.15f } } },
-        { "Disco Octaves", "ARP", {
-            { p::arpMode, 1.0f }, { p::arpRate, 9.0f }, { p::arpOctaves, 2.0f },
-            { p::arpGate, 0.4f }, { p::osc2Wave, 2.0f }, { p::osc2Semi, -12.0f },
-            { p::osc2Level, 0.6f }, { p::cutoff, 1400.0f }, { p::filterEnvAmt, 0.6f },
-            { p::filtDecay, 0.12f }, { p::filtSustain, 0.0f }, { p::ampSustain, 0.4f },
-            { p::ampRelease, 0.1f }, { p::delayMix, 0.2f } } },
-        { "Space Whistle Arp", "ARP", {
-            { p::arpMode, 4.0f }, { p::arpRate, 10.0f }, { p::arpOctaves, 3.0f },
-            { p::arpGate, 0.3f }, { p::osc1Level, 0.0f }, { p::noiseLevel, 0.06f },
-            { p::cutoff, 880.0f }, { p::resonance, 1.0f }, { p::keyTrack, 1.0f },
-            { p::filterEnvAmt, 0.0f }, { p::ampAttack, 0.01f }, { p::ampRelease, 0.3f },
-            { p::reverbMix, 0.5f }, { p::delayMix, 0.3f }, { p::quality, 2.0f } } },
-        { "Laser Zap", "ARP", {
-            { p::osc1Level, 0.0f }, { p::noiseLevel, 0.04f }, { p::cutoff, 6000.0f },
-            { p::resonance, 1.0f }, { p::keyTrack, 1.0f }, { p::filterEnvAmt, 0.9f },
-            { p::filtAttack, 0.001f }, { p::filtDecay, 0.2f }, { p::filtSustain, 0.0f },
-            { p::ampDecay, 0.25f }, { p::ampSustain, 0.0f }, { p::ampRelease, 0.2f },
-            { p::arpMode, 2.0f }, { p::arpRate, 7.0f }, { p::arpOctaves, 2.0f },
-            { p::arpGate, 0.35f }, { p::quality, 2.0f }, { p::delayMix, 0.25f } } },
-    };
-    return presets;
+    list.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff15161a));
+    list.setRowHeight(24);
+    addAndMakeVisible(list);
+    refilter();
 }
 
-} // namespace
+void PresetBrowser::refilter()
+{
+    filtered.clear();
+    const auto query = searchBox.getText().trim().toLowerCase();
+    const auto& bank = presets::all();
+    for (int i = 0; i < static_cast<int>(bank.size()); ++i)
+    {
+        const auto& preset = bank[static_cast<std::size_t>(i)];
+        if (query.isEmpty()
+            || juce::String(preset.name).toLowerCase().contains(query)
+            || juce::String(preset.category).toLowerCase().contains(query))
+            filtered.push_back(i);
+    }
+    list.updateContent();
+    list.repaint();
+}
+
+void PresetBrowser::paintListBoxItem(int row, juce::Graphics& g, int w, int h, bool selected)
+{
+    if (row < 0 || row >= static_cast<int>(filtered.size()))
+        return;
+    const auto& preset = presets::all()[static_cast<std::size_t>(filtered[static_cast<std::size_t>(row)])];
+    if (selected)
+        g.fillAll(juce::Colour(0xff5c4718).withAlpha(0.5f));
+    else if (row % 2 == 1)
+        g.fillAll(juce::Colours::white.withAlpha(0.02f));
+    g.setColour(colours::cream);
+    g.setFont(vintageFont(12.5f));
+    g.drawText(preset.name, 10, 0, w - 90, h, juce::Justification::centredLeft);
+    g.setColour(colours::amber.withAlpha(0.75f));
+    g.setFont(vintageFont(9.5f, true));
+    g.drawText(preset.category, w - 82, 0, 74, h, juce::Justification::centredRight);
+}
+
+void PresetBrowser::listBoxItemClicked(int row, const juce::MouseEvent&)
+{
+    if (row >= 0 && row < static_cast<int>(filtered.size()) && onPresetChosen)
+        onPresetChosen(filtered[static_cast<std::size_t>(row)]);
+}
+
+void PresetBrowser::visibilityChanged()
+{
+    if (isVisible())
+    {
+        searchBox.setText({}, juce::dontSendNotification);
+        refilter();
+        searchBox.grabKeyboardFocus();
+    }
+}
+
+void PresetBrowser::resized()
+{
+    auto r = getLocalBounds().reduced(10);
+    searchBox.setBounds(r.removeFromTop(28));
+    r.removeFromTop(6);
+    list.setBounds(r);
+}
+
+void PresetBrowser::paint(juce::Graphics& g)
+{
+    g.setColour(juce::Colour(0xf01a1c21));
+    g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
+    g.setColour(colours::amber.withAlpha(0.5f));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.2f);
+}
 
 SappSynthEditor::SappSynthEditor(SappSynthProcessor& proc)
     : juce::AudioProcessorEditor(proc),
@@ -642,29 +513,21 @@ SappSynthEditor::SappSynthEditor(SappSynthProcessor& proc)
     addAndMakeVisible(labPanel);
 
     // Header widgets
-    presetBox.setTextWhenNothingSelected("PRESETS");
+    presetButton.onClick = [this]
     {
-        // Item IDs map to preset indices (+1); section headings carry no ID,
-        // so selection stays stable with grouped menus.
-        juce::String lastCategory;
-        int id = 1;
-        for (const auto& preset : factoryPresets())
-        {
-            if (lastCategory != preset.category)
-            {
-                lastCategory = preset.category;
-                presetBox.addSectionHeading(lastCategory);
-            }
-            presetBox.addItem(preset.name, id++);
-        }
-    }
-    presetBox.onChange = [this]
-    {
-        const int id = presetBox.getSelectedId();
-        if (id > 0)
-            applyPreset(id - 1);
+        presetBrowser.setVisible(!presetBrowser.isVisible());
+        presetBrowser.toFront(true);
     };
-    addAndMakeVisible(presetBox);
+    addAndMakeVisible(presetButton);
+
+    presetBrowser.onPresetChosen = [this](int index)
+    {
+        applyPreset(index);
+        presetButton.setButtonText(presets::all()[static_cast<std::size_t>(index)].name);
+        presetBrowser.setVisible(false);
+    };
+    addChildComponent(presetBrowser);
+    presetBrowser.setAlwaysOnTop(true);
 
     newUnitButton.onClick = [this]
     {
@@ -755,15 +618,15 @@ SappSynthEditor::Section& SappSynthEditor::addSection(const juce::String& title)
 
 void SappSynthEditor::applyPreset(int index)
 {
-    const auto& presets = factoryPresets();
-    if (index < 0 || index >= static_cast<int>(presets.size()))
+    const auto& bank = presets::all();
+    if (index < 0 || index >= static_cast<int>(bank.size()))
         return;
 
     for (auto* parameter : processor.getParameters())
         if (auto* withId = dynamic_cast<juce::RangedAudioParameter*>(parameter))
             withId->setValueNotifyingHost(withId->getDefaultValue());
 
-    for (const auto& [id, value] : presets[static_cast<std::size_t>(index)].values)
+    for (const auto& [id, value] : bank[static_cast<std::size_t>(index)].values)
         if (auto* parameter = processor.apvts.getParameter(id))
             parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
 }
@@ -930,8 +793,9 @@ void SappSynthEditor::resized()
     header.removeFromRight(4);
     newUnitButton.setBounds(header.removeFromRight(88).reduced(0, 9));
     header.removeFromRight(8);
-    presetBox.setBounds(header.removeFromRight(200).reduced(0, 9));
+    presetButton.setBounds(header.removeFromRight(200).reduced(0, 9));
 
+    presetBrowser.setBounds(getLocalBounds().withSizeKeepingCentre(460, 480));
     keyboard.setBounds(area.removeFromBottom(76));
     area.removeFromBottom(8);
 

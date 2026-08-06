@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(SappSynth VERSION 0.4.0 LANGUAGES C CXX)
+project(SappSynth VERSION 0.5.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -110,6 +110,7 @@ if(SAPPSYNTH_BUILD_PLUGIN)
   target_sources(SappSynthPlugin PRIVATE
     source/plugin/PluginProcessor.cpp
     source/plugin/PluginEditor.cpp
+    source/plugin/FactoryPresets.cpp
   )
   target_link_libraries(SappSynthPlugin PRIVATE
     sappsynth_core
@@ -134,6 +135,7 @@ if(SAPPSYNTH_BUILD_PLUGIN)
       tools/sapp-uishot/main.cpp
       source/plugin/PluginProcessor.cpp
       source/plugin/PluginEditor.cpp
+      source/plugin/FactoryPresets.cpp
     )
     target_include_directories(SappUiShot PRIVATE source/plugin)
     target_link_libraries(SappUiShot PRIVATE
