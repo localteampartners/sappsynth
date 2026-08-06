@@ -89,10 +89,13 @@ if(SAPPSYNTH_BUILD_PLUGIN)
     NEEDS_MIDI_INPUT            TRUE
     NEEDS_MIDI_OUTPUT           FALSE
     IS_MIDI_EFFECT              FALSE
-    COPY_PLUGIN_STEP_ENABLED    TRUE
-    COPY_PLUGIN_AFTER_BUILD     TRUE
     FORMATS                     Standalone VST3 AU
   )
+  if(APPLE)
+    # Copy into ~/Library/Audio/Plug-Ins locally; on Windows the default VST3
+    # dir needs admin rights (breaks CI), so users/installers copy manually.
+    juce_enable_copy_plugin_step(SappSynthPlugin)
+  endif()
 
   juce_add_binary_data(SappSynthAssets SOURCES
     assets/wood_side.png
