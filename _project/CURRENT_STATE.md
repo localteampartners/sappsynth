@@ -2,7 +2,7 @@
 
 <!-- UPDATE WHEN: a feature ships, a deploy happens, something breaks, or something gets fixed. This file answers "what's the project like *right now*?" -->
 
-**Last verified:** 2026-08-06
+**Last verified:** 2026-08-06 (SappLink CC-in verified)
 
 ---
 
@@ -27,6 +27,9 @@
   NEW UNIT reroll. **auval passes.**
 - **Lab view**: phosphor scope + log spectrum from a lock-free telemetry tap,
   IDEAL/MODELED A/B, FREEZE DRIFT.
+- **SappLink CC-in**: 20 MIDI CCs drive parameters per the sapptune manifest
+  (any channel, ~15 ms slew, host-automation path); manifest-drift test keeps
+  the repos aligned; `SappUiShot --cctest` is the end-to-end proof.
 - **Tooling**: `sapp-render`, `sapp-bench`, `SappUiShot` (offscreen editor →
   PNG), `scripts/generate_ui_assets.py` (all UI art is procedural),
   analysis scripts.

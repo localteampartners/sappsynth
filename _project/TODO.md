@@ -38,6 +38,10 @@ For "what's broken," also see CURRENT_STATE.md's known-issues section.
 
 ## Done (recent, rolling)
 
+- 2026-08-06 — SappLink CC-in (20-CC manifest mapping, slew, drift test);
+  sapptune manifest corrected to the plugin's real ranges.
+- 2026-08-06 — v0.5.0: Analog DNA, searchable preset browser, ~75 presets.
+
 - 2026-08-06 — Vintage hardware UI (generated photoreal assets), Lab view
   (scope/spectrum, IDEAL A/B, drift freeze), SappUiShot snapshot tool.
 - 2026-08-06 — Effects (chorus/echo/reverb), unison, glide; click-free
