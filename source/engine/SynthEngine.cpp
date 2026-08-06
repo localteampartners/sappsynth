@@ -143,8 +143,10 @@ void SynthEngine::process(const RenderBlock& block)
     std::fill(block.left, block.left + block.numSamples, 0.0f);
     std::fill(block.right, block.right + block.numSamples, 0.0f);
 
-    // Quality changes are applied at block boundaries, never mid-span.
-    if (patch_.quality != activeQuality)
+    // Quality changes wait for silence: reconfiguring the island/solver while
+    // voices sound would click (architecture §12). Held notes keep the old
+    // mode; the new one arrives on the next silent block.
+    if (patch_.quality != activeQuality && voiceManager.activeVoiceCount() == 0)
     {
         activeQuality = patch_.quality;
         voiceManager.applyQuality(ProcessingQuality::forMode(activeQuality));

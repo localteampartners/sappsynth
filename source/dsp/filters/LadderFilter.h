@@ -31,13 +31,20 @@ public:
         solverIterations = std::clamp(iterations, 1, 4);
     }
 
-    // cutoffHz clamped below Nyquist; resonance 0..1 (self-oscillation starts
-    // around 0.9); drive in linear gain (1 = unity).
-    void setParameters(float cutoffHz, float resonance, float driveLinear) noexcept
+    // The expensive tan() lives here so callers can compute G sparsely (chunk
+    // edges) and interpolate — per-sample setG is just a store.
+    float computeG(float cutoffHz) const noexcept
     {
         const double fc = std::clamp(static_cast<double>(cutoffHz), 10.0, sr * 0.45);
         const double g = std::tan(kPi * fc / sr);
-        G = static_cast<float>(g / (1.0 + g));
+        return static_cast<float>(g / (1.0 + g));
+    }
+
+    void setG(float newG) noexcept { G = newG; }
+
+    // resonance 0..1 (self-oscillation starts ~0.9); drive linear (1 = unity).
+    void setTone(float resonance, float driveLinear) noexcept
+    {
         // Panel resonance -> feedback gain. 4.0 is the linear self-osc limit;
         // the tanh stages let us push slightly past it for a confident sine.
         k = 4.3f * std::clamp(resonance, 0.0f, 1.1f);
@@ -46,6 +53,12 @@ public:
         // before the input tanh so it also drives the ladder harder.
         inputMakeup = 1.0f + 0.85f * std::min(k, 4.0f) * 0.25f;
         outputMakeup = 1.0f / std::pow(std::max(drive, 1.0f), 0.6f);
+    }
+
+    void setParameters(float cutoffHz, float resonance, float driveLinear) noexcept
+    {
+        setTone(resonance, driveLinear);
+        setG(computeG(cutoffHz));
     }
 
     float process(float x) noexcept

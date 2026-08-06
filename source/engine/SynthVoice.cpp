@@ -188,12 +188,18 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
     }
 
     // ---- oversampled nonlinear island: mixer sat -> ladder -> VCA -------
+    // tan() only at chunk edges; G interpolates across the chunk (32 samples
+    // of a smoothed cutoff — the curvature error is inaudible, the CPU is not).
+    filter.setTone(resonance, filterDrive);
+    const float gStart = filter.computeG(cutoffBuf[0]);
+    const float gEnd = filter.computeG(cutoffBuf[static_cast<std::size_t>(n - 1)]);
+    const float gStep = n > 1 ? (gEnd - gStart) / static_cast<float>(n - 1) : 0.0f;
     int lastBase = -1;
     oversampler.process(signalBuf.data(), n, [&](float x, int baseIndex) noexcept
     {
         if (baseIndex != lastBase)
         {
-            filter.setParameters(cutoffBuf[static_cast<std::size_t>(baseIndex)], resonance, filterDrive);
+            filter.setG(gStart + gStep * static_cast<float>(baseIndex));
             lastBase = baseIndex;
         }
         x = dcBlocker.process(mixer.saturateSum(x));

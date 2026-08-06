@@ -45,6 +45,7 @@ public:
     {
         upState.fill(0.0f);
         downState.fill(0.0f);
+        upIndex = downIndex = 0;
     }
 
     // n input samples -> 2n output samples.
@@ -52,9 +53,10 @@ public:
     {
         for (int i = 0; i < n; ++i)
         {
-            push(upState, in[i]);
-            out[2 * i]     = 2.0f * convolveEven(upState);
-            out[2 * i + 1] = 2.0f * convolveOdd(upState);
+            upIndex = (upIndex - 1) & kMask;
+            upState[static_cast<std::size_t>(upIndex)] = in[i];
+            out[2 * i]     = 2.0f * convolveEven(upState, upIndex);
+            out[2 * i + 1] = 2.0f * convolveOdd(upState, upIndex);
         }
     }
 
@@ -63,50 +65,50 @@ public:
     {
         for (int i = 0; i < n; ++i)
         {
-            push(downState, in[2 * i]);
-            push(downState, in[2 * i + 1]);
-            out[i] = convolveAll(downState);
+            downIndex = (downIndex - 1) & kMask;
+            downState[static_cast<std::size_t>(downIndex)] = in[2 * i];
+            downIndex = (downIndex - 1) & kMask;
+            downState[static_cast<std::size_t>(downIndex)] = in[2 * i + 1];
+            out[i] = convolveAll(downState, downIndex);
         }
     }
 
 private:
-    using Delay = std::array<float, kTaps>;
+    static constexpr int kRing = 32; // power of two >= kTaps
+    static constexpr int kMask = kRing - 1;
+    using Delay = std::array<float, kRing>;
 
-    static void push(Delay& d, float x) noexcept
-    {
-        std::memmove(d.data() + 1, d.data(), (kTaps - 1) * sizeof(float));
-        d[0] = x;
-    }
-
-    float convolveAll(const Delay& d) const noexcept
+    float convolveAll(const Delay& d, int idx) const noexcept
     {
         float acc = 0.0f;
         for (int n = 0; n < kTaps; ++n)
-            acc += h[static_cast<std::size_t>(n)] * d[static_cast<std::size_t>(n)];
+            acc += h[static_cast<std::size_t>(n)] * d[static_cast<std::size_t>((idx + n) & kMask)];
         return acc;
     }
 
     // Polyphase halves for zero-stuffed interpolation: even branch sees the
     // zero taps collapse to the center coefficient.
-    float convolveEven(const Delay& d) const noexcept
+    float convolveEven(const Delay& d, int idx) const noexcept
     {
         float acc = 0.0f;
         for (int n = 0; n < kTaps; n += 2)
-            acc += h[static_cast<std::size_t>(n)] * d[static_cast<std::size_t>(n / 2)];
+            acc += h[static_cast<std::size_t>(n)] * d[static_cast<std::size_t>((idx + n / 2) & kMask)];
         return acc;
     }
 
-    float convolveOdd(const Delay& d) const noexcept
+    float convolveOdd(const Delay& d, int idx) const noexcept
     {
         float acc = 0.0f;
         for (int n = 1; n < kTaps; n += 2)
-            acc += h[static_cast<std::size_t>(n)] * d[static_cast<std::size_t>(n / 2)];
+            acc += h[static_cast<std::size_t>(n)] * d[static_cast<std::size_t>((idx + n / 2) & kMask)];
         return acc;
     }
 
     std::array<float, kTaps> h {};
     Delay upState {};
     Delay downState {};
+    int upIndex { 0 };
+    int downIndex { 0 };
 };
 
 // Oversampled island (architecture §12): the nonlinear mixer -> ladder -> VCA

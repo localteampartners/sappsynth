@@ -38,3 +38,4 @@ pids/
 .sappchatbot/          # chatbot credentials (gitignored regardless of plugin state)
 .sappbackup/snapshots/ # local backup metadata, if any
 build-core/
+.venv-assets/
