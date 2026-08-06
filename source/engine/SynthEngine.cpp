@@ -23,7 +23,11 @@ void SynthEngine::prepare(double sampleRate, int maxBlockSize)
     smCutoff.prepare(sr / SynthVoice::kControlInterval, 0.010f);
     smResonance.prepare(sr / SynthVoice::kControlInterval, 0.005f);
     smMixerDrive.prepare(sr / SynthVoice::kControlInterval, 0.010f);
-    smMaster.prepare(sr / SynthVoice::kControlInterval, 0.010f);
+    smMaster.prepare(sr, 0.010f); // ticked per sample in the output loop
+
+    chorus.prepare(sr);
+    delayFx.prepare(sr);
+    reverbFx.prepare(sr);
     smCutoff.reset(patch_.cutoffHz);
     smResonance.reset(patch_.resonance);
     smMixerDrive.reset(patch_.mixerDrive);
@@ -61,8 +65,11 @@ void SynthEngine::applyEvent(const Event& event)
     {
         case Event::Type::NoteOn:
             if (event.velocity > 0.0f)
+            {
                 voiceManager.noteOn(event.note, std::clamp(event.velocity, 0.0f, 1.0f),
-                                    effectivePatch_, unitProfile_);
+                                    effectivePatch_, unitProfile_, lastPlayedNote);
+                lastPlayedNote = event.note;
+            }
             else
                 voiceManager.noteOff(event.note);
             break;
@@ -85,7 +92,6 @@ void SynthEngine::updateControl(int numSamples)
     smCutoff.setTarget(patch_.cutoffHz);
     smResonance.setTarget(patch_.resonance);
     smMixerDrive.setTarget(patch_.mixerDrive);
-    smMaster.setTarget(dbToGain(patch_.masterDb));
 
     effectivePatch_ = patch_;
     effectivePatch_.cutoffHz = smCutoff.next();
@@ -119,15 +125,14 @@ void SynthEngine::renderSpan(float* left, float* right, int numSamples)
                               effectivePatch_, unitProfile_, sharedMod);
         });
 
-        // Output stage: soft drive (normalized so drive=1 is transparent
-        // until it limits) then master gain.
-        const float master = smMaster.value();
+        // Output drive: soft clip, normalized so drive=1 is transparent until
+        // it limits. Effects + master gain run once per block after all spans.
         const float d = outputDriveLinear;
         const float norm = 1.0f / fastTanh(std::max(d, 1.0f) * 0.8f);
         for (int i = offset; i < offset + chunk; ++i)
         {
-            left[i]  = fastTanh(left[i] * d * 0.8f) * norm * master;
-            right[i] = fastTanh(right[i] * d * 0.8f) * norm * master;
+            left[i]  = fastTanh(left[i] * d * 0.8f) * norm;
+            right[i] = fastTanh(right[i] * d * 0.8f) * norm;
         }
         offset += chunk;
     }
@@ -166,6 +171,22 @@ void SynthEngine::process(const RenderBlock& block)
     }
     if (cursor < block.numSamples)
         renderSpan(block.left + cursor, block.right + cursor, block.numSamples - cursor);
+
+    // Global FX chain (§7: SUM -> DRIVE -> FX -> OUT), then master gain.
+    chorus.setParameters(patch_.chorusMix, patch_.chorusRateHz);
+    delayFx.setParameters(patch_.delayTimeS, patch_.delayFeedback, patch_.delayMix);
+    reverbFx.setParameters(patch_.reverbSize, patch_.reverbMix);
+    chorus.process(block.left, block.right, block.numSamples);
+    delayFx.process(block.left, block.right, block.numSamples);
+    reverbFx.process(block.left, block.right, block.numSamples);
+
+    smMaster.setTarget(dbToGain(patch_.masterDb));
+    for (int i = 0; i < block.numSamples; ++i)
+    {
+        const float master = smMaster.next();
+        block.left[i] *= master;
+        block.right[i] *= master;
+    }
 }
 
 } // namespace sappsynth

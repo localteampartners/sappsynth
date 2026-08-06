@@ -48,6 +48,7 @@ if(SAPPSYNTH_BUILD_TESTS)
     tests/unit/test_mixer.cpp
     tests/unit/test_drift.cpp
     tests/unit/test_engine.cpp
+    tests/unit/test_effects.cpp
   )
   target_link_libraries(sappsynth_tests PRIVATE sappsynth_core Catch2::Catch2WithMain)
   sappsynth_set_warnings(sappsynth_tests)

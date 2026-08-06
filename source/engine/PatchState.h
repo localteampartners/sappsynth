@@ -49,6 +49,22 @@ struct PatchState
 
     int polyphony { 8 };              // 1..16
 
+    // Unison stacks voice cards per note (center-preserving detune, stereo
+    // spread, 1/sqrt(N) gain compensation). Eats polyphony, like hardware.
+    int unisonCount { 1 };            // 1..5
+    float unisonDetuneCents { 12.0f };// 0..50
+    float unisonSpread { 0.7f };      // 0..1
+    float glideSeconds { 0.0f };      // 0..1 (0 = off)
+
+    // Global effects (architecture §22) — support the synth, added post-sum.
+    float chorusMix { 0.0f };
+    float chorusRateHz { 0.5f };
+    float delayTimeS { 0.35f };
+    float delayFeedback { 0.35f };
+    float delayMix { 0.0f };
+    float reverbSize { 0.5f };
+    float reverbMix { 0.0f };
+
     // Analog character (architecture §9). characterAmount scales every static
     // tolerance; drift/warmup add the time-varying layers.
     float characterAmount { 0.5f };   // 0..1

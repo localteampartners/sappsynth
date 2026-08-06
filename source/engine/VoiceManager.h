@@ -17,7 +17,9 @@ public:
     void setUnitSeed(std::uint64_t unitSeed);
     void applyQuality(const ProcessingQuality& quality);
 
-    void noteOn(int note, float velocity, const PatchState& patch, const UnitProfile& unit);
+    // glideFromNote: previous note for portamento, -1 for none.
+    void noteOn(int note, float velocity, const PatchState& patch, const UnitProfile& unit,
+                int glideFromNote = -1);
     void noteOff(int note);
     void allNotesOff();
 

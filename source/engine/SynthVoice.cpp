@@ -55,10 +55,15 @@ void SynthVoice::applyQuality(const ProcessingQuality& quality)
 }
 
 void SynthVoice::noteOn(int note, float velocity, std::uint64_t noteSeedValue,
-                        const PatchState& patch, const UnitProfile& unit)
+                        const PatchState& patch, const UnitProfile& unit,
+                        const NoteStart& start)
 {
     note_ = note;
     velocity_ = velocity;
+    start_ = start;
+    glideOffsetSemis = (patch.glideSeconds > 0.001f && start.glideFromNote >= 0)
+                     ? static_cast<float>(start.glideFromNote - note)
+                     : 0.0f;
     noteVar_ = NoteVariation::generate(noteSeedValue);
     noiseRng.seed(seeds::combine(noteSeedValue, 0x9013Eull));
 
@@ -127,9 +132,21 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
     const float drift1 = (0.35f * mod.unitDriftNorm + 0.45f * vDrift + 0.20f * o1Local) * driftScale;
     const float drift2 = (0.35f * mod.unitDriftNorm + 0.45f * vDrift + 0.20f * o2Local) * driftScale;
 
+    // Glide: exponential approach from the previous note in semitone space.
+    if (glideOffsetSemis != 0.0f)
+    {
+        const float coef = std::exp(-static_cast<float>(n)
+                                    / (std::max(patch.glideSeconds, 0.005f) * static_cast<float>(sr) * 0.3f));
+        glideOffsetSemis *= coef;
+        if (std::abs(glideOffsetSemis) < 0.001f)
+            glideOffsetSemis = 0.0f;
+    }
+
     const float pitchMods = mod.lfoValue * patch.lfoToPitchCents / 100.0f
                           + scaledOffset(unit.masterTuneCents + noteVar_.pitchStartCents, character) / 100.0f
-                          + mod.warmupCents / 100.0f;
+                          + mod.warmupCents / 100.0f
+                          + start_.unisonDetuneCents / 100.0f
+                          + glideOffsetSemis;
 
     osc1.setWaveform(patch.osc1.waveform);
     osc2.setWaveform(patch.osc2.waveform);
@@ -208,12 +225,14 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
     });
 
     // ---- pan + accumulate ----------------------------------------------
-    const float pan = std::clamp(scaledOffset(profile_.panBias, character), -1.0f, 1.0f);
+    const float pan = std::clamp(scaledOffset(profile_.panBias, character) + start_.unisonPan,
+                                 -1.0f, 1.0f);
     // +8 dB voice makeup: recovers the mixer's 0.5 reference staging and the
     // VCA curve so a single full-level oscillator lands near -10 dBFS.
     constexpr float kVoiceMakeup = 2.5f;
-    const float panL = kVoiceMakeup * std::cos((pan + 1.0f) * static_cast<float>(kPi) * 0.25f);
-    const float panR = kVoiceMakeup * std::sin((pan + 1.0f) * static_cast<float>(kPi) * 0.25f);
+    const float gain = kVoiceMakeup * start_.unisonGain;
+    const float panL = gain * std::cos((pan + 1.0f) * static_cast<float>(kPi) * 0.25f);
+    const float panR = gain * std::sin((pan + 1.0f) * static_cast<float>(kPi) * 0.25f);
     for (int i = 0; i < n; ++i)
     {
         const float y = signalBuf[static_cast<std::size_t>(i)];

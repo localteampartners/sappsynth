@@ -72,17 +72,35 @@ SynthVoice* VoiceManager::findStealTarget() noexcept
     return best;
 }
 
-void VoiceManager::noteOn(int note, float velocity, const PatchState& patch, const UnitProfile& unit)
+void VoiceManager::noteOn(int note, float velocity, const PatchState& patch, const UnitProfile& unit,
+                          int glideFromNote)
 {
     const int polyphony = std::clamp(patch.polyphony, 1, kMaxVoices);
-    SynthVoice* target = activeVoiceCount() < polyphony ? findFreeVoice() : nullptr;
-    if (target == nullptr)
-        target = findStealTarget();
-    if (target == nullptr)
-        return;
+    const int unison = std::clamp(patch.unisonCount, 1, 5);
+    const float gainComp = 1.0f / std::sqrt(static_cast<float>(unison));
 
-    target->setAllocationAge(allocationCounter++);
-    target->noteOn(note, velocity, seeds::noteSeed(unitSeed_, noteCounter++), patch, unit);
+    for (int u = 0; u < unison; ++u)
+    {
+        SynthVoice* target = activeVoiceCount() < polyphony ? findFreeVoice() : nullptr;
+        if (target == nullptr)
+            target = findStealTarget();
+        if (target == nullptr)
+            return;
+
+        // Center-preserving spread: members sit symmetrically around the
+        // played pitch; a lone voice sits exactly on it.
+        const float position = unison == 1 ? 0.0f
+            : 2.0f * static_cast<float>(u) / static_cast<float>(unison - 1) - 1.0f;
+
+        SynthVoice::NoteStart start;
+        start.unisonDetuneCents = position * patch.unisonDetuneCents;
+        start.unisonPan = position * patch.unisonSpread;
+        start.unisonGain = gainComp;
+        start.glideFromNote = glideFromNote;
+
+        target->setAllocationAge(allocationCounter++);
+        target->noteOn(note, velocity, seeds::noteSeed(unitSeed_, noteCounter++), patch, unit, start);
+    }
 }
 
 void VoiceManager::noteOff(int note)

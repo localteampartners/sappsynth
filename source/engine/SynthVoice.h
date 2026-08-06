@@ -37,8 +37,19 @@ public:
     void configureIdentity(int voiceIndex, std::uint64_t unitSeed);
     void applyQuality(const ProcessingQuality& quality);
 
+    // Per-allocation start info: unison member offsets and the glide origin
+    // (previous note, or -1 for none).
+    struct NoteStart
+    {
+        float unisonDetuneCents { 0.0f };
+        float unisonPan { 0.0f };
+        float unisonGain { 1.0f };
+        int glideFromNote { -1 };
+    };
+
     void noteOn(int note, float velocity, std::uint64_t noteSeedValue,
-                const PatchState& patch, const UnitProfile& unit);
+                const PatchState& patch, const UnitProfile& unit,
+                const NoteStart& start);
     void noteOff();
     void steal();          // fast-release for reallocation
     void hardStop();
@@ -81,6 +92,8 @@ private:
     int note_ { -1 };
     float velocity_ { 1.0f };
     int oversampleFactor { 2 };
+    NoteStart start_ {};
+    float glideOffsetSemis { 0.0f };
 
     std::array<float, kControlInterval> signalBuf {};
     std::array<float, kControlInterval> ampEnvBuf {};

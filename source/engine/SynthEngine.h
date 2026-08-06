@@ -7,6 +7,9 @@
 #include "../dsp/variation/DriftProcess.h"
 #include "../dsp/variation/ThermalModel.h"
 #include "../dsp/utility/SmoothedValue.h"
+#include "../dsp/effects/Chorus.h"
+#include "../dsp/effects/Delay.h"
+#include "../dsp/effects/Reverb.h"
 
 namespace sappsynth {
 
@@ -49,6 +52,10 @@ private:
     DriftProcess unitDrift;
     ThermalModel thermal;
     SharedModulation sharedMod {};
+    Chorus chorus;
+    StereoDelay delayFx;
+    Reverb reverbFx;
+    int lastPlayedNote { -1 };
 
     SmoothedValue smCutoff, smResonance, smMixerDrive, smMaster;
 
