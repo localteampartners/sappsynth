@@ -16,6 +16,8 @@ struct UnitProfile
     float resonanceOffset { 0.0f };      // +- resonance calibration
     float envTimeFactor { 1.0f };        // global envelope timing bias
     float outputTilt { 0.0f };           // output-stage gain bias (dB)
+    float noiseFloor { 1.0f };           // this unit's hiss level factor (0.5..1.5)
+    float supplyStiffness { 0.0f };      // per-unit bias on supply sag response (+-)
 
     static UnitProfile generate(std::uint64_t unitSeed) noexcept
     {
@@ -26,6 +28,8 @@ struct UnitProfile
         p.resonanceOffset   = rng.normal() * 0.015f;
         p.envTimeFactor     = 1.0f + rng.normal() * 0.02f;
         p.outputTilt        = rng.normal() * 0.25f;
+        p.noiseFloor        = 1.0f + rng.normal() * 0.25f;
+        p.supplyStiffness   = rng.normal() * 0.15f;
         return p;
     }
 };
@@ -39,8 +43,11 @@ struct VoiceProfile
     float pulseWidthOffset { 0.0f };
     float filterCutoffCents { 0.0f };
     float resonanceOffset { 0.0f };
-    float envTimeFactor { 1.0f };
+    float envTimeFactor { 1.0f };        // decay/release timing (RC tolerance)
+    float envAttackScale { 1.0f };       // attack-specific timing tolerance
+    float envSustainOffset { 0.0f };     // sustain level bias (+-)
     float vcaGainDb { 0.0f };
+    float vcaBleed { 0.0f };             // 0..1: low-level bleed when env is closed
     float panBias { 0.0f };              // -1..1, tiny
     float satAsymmetry { 0.0f };         // per-card saturation symmetry
 
@@ -56,7 +63,10 @@ struct VoiceProfile
         p.filterCutoffCents = rng.normal() * 45.0f;
         p.resonanceOffset   = rng.normal() * 0.02f;
         p.envTimeFactor     = 1.0f + rng.normal() * 0.03f;
+        p.envAttackScale    = 1.0f + rng.normal() * 0.04f;
+        p.envSustainOffset  = rng.normal() * 0.015f;
         p.vcaGainDb         = rng.normal() * 0.3f;
+        p.vcaBleed          = std::abs(rng.normal()) * 0.5f;
         p.panBias           = rng.normal() * 0.04f;
         p.satAsymmetry      = rng.normal() * 0.08f;
         return p;

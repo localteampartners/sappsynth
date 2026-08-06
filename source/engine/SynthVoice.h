@@ -17,13 +17,28 @@
 namespace sappsynth {
 
 // Values shared across voices for one control tick, computed by the engine.
+// Values shared across voices for one control tick. The grouped scales are
+// the Analog DNA correlation model (documented in docs/analog-dna.md):
+// Condition widens all tolerances, Calibration tightens tuning/cutoff
+// specifically, Age drives drift/noise/bleed, Supply sag pushes pitch down,
+// cutoff down and headroom into saturation together.
 struct SharedModulation
 {
     float lfoValue { 0.0f };        // -1..1
     float unitDriftNorm { 0.0f };   // ~N(0,1) correlated unit-wide drift
     float warmupCents { 0.0f };
-    float characterAmount { 0.5f };
+    float characterAmount { 0.5f }; // legacy master (== staticScale base)
     bool driftFrozen { false };     // Lab: hold all drift processes still
+
+    float staticScale { 0.5f };     // env/VCA/pan/asym/PW tolerances
+    float calibScale { 0.5f };      // tuning + filter-cutoff tolerances
+    float driftScale { 1.0f };      // multiplier on patch drift amount
+    float noiseFloorAmp { 0.0f };   // linear amplitude of unit hiss at VCA
+    float bleedScale { 0.0f };      // scales per-voice VCA bleed
+    float warmthDrive { 1.0f };     // internal gain-staging factor
+    float supplyPitchCents { 0.0f };// shared supply sag -> pitch
+    float supplyCutoffOct { 0.0f }; // shared supply sag -> cutoff
+    float supplyDrive { 1.0f };     // shared supply sag -> less headroom
 };
 
 // One complete voice card (architecture §15): owns all audio-rate state, has a

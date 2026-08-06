@@ -40,13 +40,28 @@ public:
     double sampleRate() const noexcept { return sr; }
 
     // Lab controls (architecture §19): UI-thread setters, read on the audio
-    // thread as atomics. Ideal mode strips every modeled behavior so the
-    // clean digital core can be A/B'd against the full model.
+    // thread as atomics. Modes: 0 = Ideal Digital (strips every modeled
+    // behavior), 1 = Analog DNA (production), 2 = Exaggerated Demonstration.
+    enum class LabMode { Ideal = 0, Dna = 1, Exaggerated = 2 };
+
     TelemetryBus& telemetry() noexcept { return telemetryBus; }
-    void setLabIdealMode(bool ideal) noexcept { labIdeal.store(ideal, std::memory_order_relaxed); }
+    void setLabMode(LabMode mode) noexcept { labMode.store(static_cast<int>(mode), std::memory_order_relaxed); }
+    LabMode currentLabMode() const noexcept { return static_cast<LabMode>(labMode.load(std::memory_order_relaxed)); }
+    void setLabIdealMode(bool ideal) noexcept { setLabMode(ideal ? LabMode::Ideal : LabMode::Dna); }
     void setDriftFrozen(bool frozen) noexcept { labDriftFrozen.store(frozen, std::memory_order_relaxed); }
-    bool labIdealMode() const noexcept { return labIdeal.load(std::memory_order_relaxed); }
     bool driftFrozen() const noexcept { return labDriftFrozen.load(std::memory_order_relaxed); }
+
+    // Diagnostic aggregates for the fingerprint/timeline display — written on
+    // the audio thread as relaxed atomics, read from the UI timer.
+    struct Diagnostics
+    {
+        std::atomic<float> supplySag { 0.0f };
+        std::atomic<float> voiceLoad { 0.0f };
+        std::atomic<float> warmupCents { 0.0f };
+        std::atomic<float> unitDriftNorm { 0.0f };
+    };
+    const Diagnostics& diagnostics() const noexcept { return diag; }
+    const VoiceManager& voices() const noexcept { return voiceManager; }
 
 private:
     void applyEvent(const Event& event);
@@ -74,8 +89,10 @@ private:
     SmoothedValue smCutoff, smResonance, smMixerDrive, smMaster;
 
     TelemetryBus telemetryBus;
-    std::atomic<bool> labIdeal { false };
+    std::atomic<int> labMode { 1 };
     std::atomic<bool> labDriftFrozen { false };
+    Diagnostics diag;
+    float supplySag { 0.0f };  // shared circuit state (0 = fully recovered)
 
     // Arpeggiator state (audio-thread only, fixed capacity).
     struct HeldNote { int note; float velocity; };

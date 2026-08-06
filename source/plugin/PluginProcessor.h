@@ -38,8 +38,11 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
     // Reroll the virtual instrument (new unit seed / new "physical unit").
+    // Locking pins the unit identity (dna.md: seed must survive edits).
     void rerollUnitSeed();
     juce::String unitSeedText() const;
+    bool isSeedLocked() const noexcept { return seedLocked; }
+    void setSeedLocked(bool locked) noexcept { seedLocked = locked; }
 
     // Lab view access (telemetry tap + A/B flags live on the engine).
     SynthEngine& synthEngine() noexcept { return engine; }
@@ -53,6 +56,7 @@ private:
 
     SynthEngine engine;
     std::vector<Event> eventScratch;
+    bool seedLocked { false };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SappSynthProcessor)
 };

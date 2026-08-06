@@ -17,13 +17,15 @@ public:
         dcCompensation = saturationDcOffset(drive, asymmetry);
     }
 
-    float process(float x, float envelopeGain) noexcept
+    // bleed: tiny constant leakage past the closed VCA (worn-CA3080 style);
+    // 0 is fully clean.
+    float process(float x, float envelopeGain, float bleed = 0.0f) noexcept
     {
         const float shaped = (saturate(x, drive, asymmetry) - dcCompensation) / drive;
         // Perceptual gain curve: ~x^1.6 between linear and exponential.
         const float g = envelopeGain * envelopeGain
                       / (envelopeGain + 0.6f * (1.0f - envelopeGain) + 1.0e-9f);
-        return shaped * g * gainBias;
+        return shaped * (g * gainBias + bleed);
     }
 
 private:

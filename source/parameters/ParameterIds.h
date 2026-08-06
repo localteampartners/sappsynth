@@ -70,6 +70,11 @@ inline constexpr const char* reverbSize    = "fx.reverb.size";
 inline constexpr const char* reverbMix     = "fx.reverb.mix";
 
 inline constexpr const char* character     = "variation.amount";
+inline constexpr const char* dnaCondition  = "dna.condition";
+inline constexpr const char* dnaCalibration= "dna.calibration";
+inline constexpr const char* dnaWarmth     = "dna.warmth";
+inline constexpr const char* dnaSupply     = "dna.supply";
+inline constexpr const char* dnaAge        = "dna.age";
 inline constexpr const char* driftAmount   = "variation.driftCents";
 inline constexpr const char* driftSpeed    = "variation.driftRate";
 inline constexpr const char* warmup        = "variation.warmup";

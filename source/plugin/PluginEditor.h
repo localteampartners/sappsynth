@@ -51,6 +51,8 @@ private:
     std::vector<float> spectrum;
     juce::dsp::FFT fft { 11 }; // 2048
     std::vector<float> fftData;
+    std::vector<float> sagHistory, driftHistory; // UI-side rolling timeline
+    int lastActiveVoice { -1 };
 };
 
 class SappSynthEditor : public juce::AudioProcessorEditor
@@ -101,6 +103,7 @@ private:
 
     juce::ComboBox presetBox;
     juce::TextButton newUnitButton { "NEW UNIT" };
+    juce::TextButton lockButton { "LOCK" };
     juce::Label seedLabel;
     LabPanel labPanel;
     juce::MidiKeyboardComponent keyboard;

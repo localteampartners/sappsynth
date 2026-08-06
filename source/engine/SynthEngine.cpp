@@ -226,9 +226,11 @@ void SynthEngine::updateControl(int numSamples)
     effectivePatch_.resonance = smResonance.next();
     effectivePatch_.mixerDrive = smMixerDrive.next();
 
-    // Lab ideal mode: strip every modeled behavior — variation, drift,
-    // warm-up, mixer/VCA/output nonlinearity — leaving the clean digital core.
-    if (labIdeal.load(std::memory_order_relaxed))
+    // Operating mode (docs/analog-dna.md): Ideal strips every modeled
+    // behavior; Exaggerated multiplies it for the educational modes.
+    const auto mode = static_cast<LabMode>(labMode.load(std::memory_order_relaxed));
+    float exaggerate = 1.0f;
+    if (mode == LabMode::Ideal)
     {
         effectivePatch_.characterAmount = 0.0f;
         effectivePatch_.driftAmountCents = 0.0f;
@@ -237,8 +239,51 @@ void SynthEngine::updateControl(int numSamples)
         effectivePatch_.mixerCharacter = 0.0f;
         effectivePatch_.outputDriveDb = 0.0f;
     }
+    else if (mode == LabMode::Exaggerated)
+        exaggerate = 4.0f;
+
     sharedMod.driftFrozen = labDriftFrozen.load(std::memory_order_relaxed);
     sharedMod.characterAmount = effectivePatch_.characterAmount;
+
+    // ---- Analog DNA correlation model -----------------------------------
+    // Condition widens every tolerance; Calibration tightens tuning/cutoff
+    // alignment specifically; Age drives the time-varying and dirt layers;
+    // Warmth raises internal operating level into the nonlinear stages.
+    {
+        const PatchState& dna = effectivePatch_;
+        const float master = dna.characterAmount * exaggerate;
+        const float condition = 0.5f + 1.5f * dna.dnaCondition;      // Factory..Worn
+        const float misalign = 1.5f - dna.dnaCalibration;            // 0.5 tight .. 1.5 loose
+        sharedMod.staticScale = std::min(master * condition, 4.0f);
+        sharedMod.calibScale = std::min(master * condition * misalign, 4.0f);
+        sharedMod.driftScale = std::min((0.4f + 1.6f * dna.dnaAge) * exaggerate, 8.0f);
+        sharedMod.noiseFloorAmp = dna.dnaAge * dna.characterAmount
+                                * unitProfile_.noiseFloor * 0.0004f * exaggerate;
+        sharedMod.bleedScale = dna.dnaAge * dna.characterAmount * exaggerate;
+        sharedMod.warmthDrive = 0.8f + 1.4f * dna.dnaWarmth;
+
+        // Shared circuit state: aggregate voice load sags the virtual supply
+        // (fast attack ~80 ms, slow recovery ~500 ms); a stiff supply barely
+        // moves. Sag pushes pitch and cutoff down and eats headroom together
+        // — correlated, but with different scaling per destination.
+        const float load = static_cast<float>(voiceManager.activeVoiceCount())
+                         / static_cast<float>(VoiceManager::kMaxVoices);
+        const float softness = std::clamp(1.0f - dna.dnaSupply + unitProfile_.supplyStiffness
+                                          * dna.characterAmount, 0.0f, 1.0f);
+        const float targetSag = load * softness * 0.6f;
+        const float dt = static_cast<float>(numSamples / sr);
+        const float coefficient = 1.0f - std::exp(-dt / (targetSag > supplySag ? 0.08f : 0.5f));
+        supplySag += (targetSag - supplySag) * coefficient;
+        const float sagFx = supplySag * dna.characterAmount * exaggerate;
+        sharedMod.supplyPitchCents = -sagFx * 3.0f;
+        sharedMod.supplyCutoffOct = -sagFx * 0.12f;
+        sharedMod.supplyDrive = 1.0f + sagFx * 0.35f;
+
+        diag.supplySag.store(supplySag, std::memory_order_relaxed);
+        diag.voiceLoad.store(load, std::memory_order_relaxed);
+        diag.warmupCents.store(sharedMod.warmupCents, std::memory_order_relaxed);
+        diag.unitDriftNorm.store(sharedMod.unitDriftNorm, std::memory_order_relaxed);
+    }
 
     lfo.setRate(patch_.lfoRateHz);
     lfo.setShape(patch_.lfoShape);

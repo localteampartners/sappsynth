@@ -75,12 +75,18 @@ struct PatchState
     float reverbSize { 0.5f };
     float reverbMix { 0.0f };
 
-    // Analog character (architecture §9). characterAmount scales every static
-    // tolerance; drift/warmup add the time-varying layers.
-    float characterAmount { 0.5f };   // 0..1
+    // Analog DNA (architecture §9 + docs/analog-dna.md). characterAmount is
+    // the DNA master; the macros below shape *which* behaviors dominate.
+    float characterAmount { 0.5f };   // 0..1 — DNA master amount
     float driftAmountCents { 1.5f };  // 0..10 target stationary std-dev
     float driftSpeed { 0.5f };        // 0..1 -> mean-reversion rate
     float warmupAmount { 0.0f };      // 0..1
+
+    float dnaCondition { 0.35f };     // tolerance range: Factory..Worn
+    float dnaCalibration { 0.8f };    // 1 = tightly aligned tuning/cutoff
+    float dnaWarmth { 0.4f };         // circuit operating level (gain staging)
+    float dnaSupply { 0.7f };         // 1 = stiff supply (no sag)
+    float dnaAge { 0.25f };           // noise floor, drift range, bleed
 
     float outputDriveDb { 0.0f };     // 0..24 into the output saturator
     float masterDb { -6.0f };

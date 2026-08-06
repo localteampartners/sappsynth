@@ -73,12 +73,17 @@ void SynthVoice::noteOn(int note, float velocity, std::uint64_t noteSeedValue,
     osc2.noteOn(noteVar_.phase01 + 0.37);
     sub.noteOn(0.0);
 
-    const float character = patch.characterAmount;
+    // Note-on tolerances use the DNA static scale (master x condition).
+    const float character = patch.characterAmount * (0.5f + 1.5f * patch.dnaCondition);
     const float envTol = scaledFactor(unit.envTimeFactor, character)
                        * scaledFactor(profile_.envTimeFactor, character);
-    ampEnv.setParameters(patch.ampAttack, patch.ampDecay, patch.ampSustain, patch.ampRelease);
-    filterEnv.setParameters(patch.filterAttack, patch.filterDecay, patch.filterSustain, patch.filterRelease);
-    const float attackVar = scaledFactor(noteVar_.attackFactor, character);
+    const float sustainOffset = scaledOffset(profile_.envSustainOffset, character);
+    ampEnv.setParameters(patch.ampAttack, patch.ampDecay,
+                         std::clamp(patch.ampSustain + sustainOffset, 0.0f, 1.0f), patch.ampRelease);
+    filterEnv.setParameters(patch.filterAttack, patch.filterDecay,
+                            std::clamp(patch.filterSustain + sustainOffset, 0.0f, 1.0f), patch.filterRelease);
+    const float attackVar = scaledFactor(noteVar_.attackFactor, character)
+                          * scaledFactor(profile_.envAttackScale, character);
     ampEnv.noteOn(envTol, attackVar);
     filterEnv.noteOn(envTol, attackVar);
 }
@@ -121,7 +126,10 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
         return;
 
     const int n = std::min(numSamples, kControlInterval);
-    const float character = mod.characterAmount;
+    // DNA grouped scales: calibScale for tuning/cutoff alignment, staticScale
+    // for everything else static (see docs/analog-dna.md correlation model).
+    const float character = mod.staticScale;
+    const float calib = mod.calibScale;
 
     // ---- control-rate update -------------------------------------------
     // Correlated drift blend (architecture §9.4). Frozen in Lab mode: hold
@@ -129,7 +137,7 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
     const float vDrift = mod.driftFrozen ? voiceDrift.value() : voiceDrift.process(n);
     const float o1Local = mod.driftFrozen ? osc1Drift.value() : osc1Drift.process(n);
     const float o2Local = mod.driftFrozen ? osc2Drift.value() : osc2Drift.process(n);
-    const float driftScale = patch.driftAmountCents;
+    const float driftScale = patch.driftAmountCents * mod.driftScale;
     const float drift1 = (0.35f * mod.unitDriftNorm + 0.45f * vDrift + 0.20f * o1Local) * driftScale;
     const float drift2 = (0.35f * mod.unitDriftNorm + 0.45f * vDrift + 0.20f * o2Local) * driftScale;
 
@@ -144,18 +152,19 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
     }
 
     const float pitchMods = mod.lfoValue * patch.lfoToPitchCents / 100.0f
-                          + scaledOffset(unit.masterTuneCents + noteVar_.pitchStartCents, character) / 100.0f
-                          + mod.warmupCents / 100.0f
+                          + scaledOffset(unit.masterTuneCents, calib) / 100.0f
+                          + scaledOffset(noteVar_.pitchStartCents, character) / 100.0f
+                          + (mod.warmupCents + mod.supplyPitchCents) / 100.0f
                           + start_.unisonDetuneCents / 100.0f
                           + glideOffsetSemis;
 
     osc1.setWaveform(patch.osc1.waveform);
     osc2.setWaveform(patch.osc2.waveform);
     sub.setWaveform(patch.subWaveform);
-    osc1.setTolerances(scaledOffset(profile_.osc1TuneCents, character),
-                       scaledOffset(profile_.osc1TrackError, character));
-    osc2.setTolerances(scaledOffset(profile_.osc2TuneCents, character),
-                       scaledOffset(profile_.osc2TrackError, character));
+    osc1.setTolerances(scaledOffset(profile_.osc1TuneCents, calib),
+                       scaledOffset(profile_.osc1TrackError, calib));
+    osc2.setTolerances(scaledOffset(profile_.osc2TuneCents, calib),
+                       scaledOffset(profile_.osc2TrackError, calib));
     sub.setTolerances(0.0f, 0.0f);
 
     osc1.updatePitch(noteWithPatchOffsets(patch.osc1) + pitchMods, drift1);
@@ -165,7 +174,9 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
     sub.updatePitch(noteWithPatchOffsets(patch.osc1) + pitchMods - 12.0 * patch.subOctave, drift1);
 
     mixer.setGains(patch.osc1.level, patch.osc2.level, patch.subLevel, patch.noiseLevel);
-    mixer.setCharacter(patch.mixerDrive,
+    // Warmth raises the internal operating level into the mixer saturator;
+    // supply sag eats headroom the same way (correlated, §shared circuit).
+    mixer.setCharacter(patch.mixerDrive * mod.warmthDrive * mod.supplyDrive,
                        patch.mixerCharacter * (0.25f + scaledOffset(profile_.satAsymmetry, character)));
 
     vca.configure(0.2f,
@@ -174,14 +185,15 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
 
     // Filter modifiers that hold for the whole chunk.
     const float velCut = (velocity_ - 0.5f) * 2.0f * patch.velocityToCutoff;
-    const float calibrationCents = scaledOffset(unit.filterCutoffCents + profile_.filterCutoffCents, character);
+    const float calibrationCents = scaledOffset(unit.filterCutoffCents + profile_.filterCutoffCents, calib);
     const float keyOffsetOct = patch.keyTrack * static_cast<float>(note_ - 60) / 12.0f;
     const float staticOct = keyOffsetOct + velCut + mod.lfoValue * patch.lfoToCutoff * 3.0f
-                          + calibrationCents / 1200.0f;
+                          + calibrationCents / 1200.0f + mod.supplyCutoffOct;
     const float resonance = std::clamp(patch.resonance
                           + scaledOffset(unit.resonanceOffset + profile_.resonanceOffset, character),
                           0.0f, 1.1f);
-    const float filterDrive = dbToGain(patch.filterDriveDb);
+    const float filterDrive = dbToGain(patch.filterDriveDb) * mod.supplyDrive;
+    const float bleedAmp = profile_.vcaBleed * mod.bleedScale * 0.006f;
 
     const float pwm = patch.osc1.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character);
     const float pwm2 = patch.osc2.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character);
@@ -224,7 +236,7 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
         }
         x = dcBlocker.process(mixer.saturateSum(x));
         x = filter.process(x);
-        return vca.process(x, ampEnvBuf[static_cast<std::size_t>(baseIndex)]);
+        return vca.process(x, ampEnvBuf[static_cast<std::size_t>(baseIndex)], bleedAmp);
     });
 
     // ---- pan + accumulate ----------------------------------------------
@@ -238,7 +250,10 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
     const float panR = gain * std::sin((pan + 1.0f) * static_cast<float>(kPi) * 0.25f);
     for (int i = 0; i < n; ++i)
     {
-        const float y = signalBuf[static_cast<std::size_t>(i)];
+        // Unit noise floor: this instrument's hiss, present while the voice
+        // sounds (Age x DNA amount x per-unit factor).
+        const float y = signalBuf[static_cast<std::size_t>(i)]
+                      + mod.noiseFloorAmp * noiseRng.nextSigned();
         left[i] += y * panL;
         right[i] += y * panR;
     }

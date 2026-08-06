@@ -120,7 +120,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     layout.add(std::make_unique<P>(ID{p::reverbSize, 1}, "Verb Size", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
     layout.add(std::make_unique<P>(ID{p::reverbMix, 1}, "Reverb", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
 
-    layout.add(std::make_unique<P>(ID{p::character, 1}, "Character", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+    layout.add(std::make_unique<P>(ID{p::character, 1}, "DNA Amount", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+    layout.add(std::make_unique<P>(ID{p::dnaCondition, 1}, "Condition", juce::NormalisableRange<float>(0.0f, 1.0f), 0.35f));
+    layout.add(std::make_unique<P>(ID{p::dnaCalibration, 1}, "Calibration", juce::NormalisableRange<float>(0.0f, 1.0f), 0.8f));
+    layout.add(std::make_unique<P>(ID{p::dnaWarmth, 1}, "Warmth", juce::NormalisableRange<float>(0.0f, 1.0f), 0.4f));
+    layout.add(std::make_unique<P>(ID{p::dnaSupply, 1}, "Supply", juce::NormalisableRange<float>(0.0f, 1.0f), 0.7f));
+    layout.add(std::make_unique<P>(ID{p::dnaAge, 1}, "Age", juce::NormalisableRange<float>(0.0f, 1.0f), 0.25f));
     layout.add(std::make_unique<P>(ID{p::driftAmount, 1}, "Drift",
                                    juce::NormalisableRange<float>(0.0f, 10.0f, 0.01f), 1.5f));
     layout.add(std::make_unique<P>(ID{p::driftSpeed, 1}, "Drift Speed", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
@@ -205,6 +210,11 @@ PatchState SappSynthProcessor::buildPatchFromParameters()
     patch.reverbMix = value(p::reverbMix);
 
     patch.characterAmount = value(p::character);
+    patch.dnaCondition = value(p::dnaCondition);
+    patch.dnaCalibration = value(p::dnaCalibration);
+    patch.dnaWarmth = value(p::dnaWarmth);
+    patch.dnaSupply = value(p::dnaSupply);
+    patch.dnaAge = value(p::dnaAge);
     patch.driftAmountCents = value(p::driftAmount);
     patch.driftSpeed = value(p::driftSpeed);
     patch.warmupAmount = value(p::warmup);
@@ -275,6 +285,7 @@ void SappSynthProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     state.setProperty("unitSeed", juce::String(static_cast<juce::uint64>(engine.unitSeed())), nullptr);
+    state.setProperty("unitSeedLocked", seedLocked, nullptr);
     if (const auto xml = state.createXml())
         copyXmlToBinary(*xml, destData);
 }
@@ -292,13 +303,15 @@ void SappSynthProcessor::setStateInformation(const void* data, int sizeInBytes)
                 engine.setUnitSeed(seedText.getLargeIntValue() > 0
                                        ? static_cast<std::uint64_t>(seedText.getLargeIntValue())
                                        : 0x5A995EEDull);
+            seedLocked = static_cast<bool>(state.getProperty("unitSeedLocked", false));
         }
     }
 }
 
 void SappSynthProcessor::rerollUnitSeed()
 {
-    engine.setUnitSeed(static_cast<std::uint64_t>(juce::Random::getSystemRandom().nextInt64()));
+    if (!seedLocked)
+        engine.setUnitSeed(static_cast<std::uint64_t>(juce::Random::getSystemRandom().nextInt64()));
 }
 
 juce::String SappSynthProcessor::unitSeedText() const

@@ -160,15 +160,18 @@ LabPanel::LabPanel(SappSynthProcessor& proc) : processor(proc)
     spectrum.resize(256, -100.0f);
     fftData.resize(2 * 2048, 0.0f);
 
-    idealButton.setClickingTogglesState(true);
-    idealButton.setTooltip("A/B: strip variation, drift, warm-up and nonlinear drive "
-                           "to hear the ideal digital core");
+    // Cycles the three operating modes: Ideal Digital -> Analog DNA ->
+    // Exaggerated Demonstration (dna.md). Click-free: applied at control rate.
+    idealButton.setTooltip("Cycle: Ideal Digital / Analog DNA / Exaggerated Demonstration");
     idealButton.onClick = [this]
     {
-        processor.synthEngine().setLabIdealMode(idealButton.getToggleState());
-        idealButton.setButtonText(idealButton.getToggleState() ? "IDEAL" : "MODELED");
+        auto& eng = processor.synthEngine();
+        const int next = (static_cast<int>(eng.currentLabMode()) + 1) % 3;
+        eng.setLabMode(static_cast<SynthEngine::LabMode>(next));
+        idealButton.setButtonText(next == 0 ? "IDEAL" : next == 1 ? "ANALOG DNA" : "EXAGGERATED");
+        idealButton.setToggleState(next != 1, juce::dontSendNotification);
     };
-    idealButton.setButtonText("MODELED");
+    idealButton.setButtonText("ANALOG DNA");
     addAndMakeVisible(idealButton);
 
     freezeButton.setClickingTogglesState(true);
@@ -207,6 +210,19 @@ void LabPanel::timerCallback()
         // Fast attack, slow release smoothing keeps the display readable.
         spectrum[b] = db > spectrum[b] ? db : spectrum[b] * 0.92f + db * 0.08f;
     }
+
+    // Timeline: UI-side rolling history of shared circuit state (the audio
+    // thread only writes relaxed atomics).
+    const auto& diag = processor.synthEngine().diagnostics();
+    sagHistory.push_back(diag.supplySag.load(std::memory_order_relaxed));
+    driftHistory.push_back(diag.unitDriftNorm.load(std::memory_order_relaxed));
+    if (sagHistory.size() > 240) { sagHistory.erase(sagHistory.begin()); driftHistory.erase(driftHistory.begin()); }
+
+    const auto& vm = processor.synthEngine().voices();
+    for (int i = 0; i < 16; ++i)
+        if (vm.voice(i).isActive())
+            lastActiveVoice = i;
+
     repaint();
 }
 
@@ -222,6 +238,7 @@ void LabPanel::paint(juce::Graphics& g)
 {
     auto r = getLocalBounds().reduced(6);
     r.removeFromBottom(26);
+    auto fingerprintArea = r.removeFromBottom(18);
     auto scopeArea = r.removeFromTop(r.getHeight() / 2).toFloat();
     auto specArea = r.toFloat();
 
@@ -289,6 +306,50 @@ void LabPanel::paint(juce::Graphics& g)
     g.setFont(vintageFont(9.0f, true));
     g.drawText("SCOPE", scopeArea.toNearestInt().reduced(5, 3), juce::Justification::topRight);
     g.drawText("SPECTRUM", specArea.toNearestInt().reduced(5, 3), juce::Justification::topRight);
+
+    // --- voice fingerprint cells + shared-state timeline ------------------
+    const auto& vm = processor.synthEngine().voices();
+    auto cells = fingerprintArea.removeFromLeft(fingerprintArea.getWidth() / 2);
+    const int cellW = juce::jmax(1, cells.getWidth() / 16);
+    g.setFont(vintageFont(7.5f, true));
+    for (int i = 0; i < 16; ++i)
+    {
+        auto cell = juce::Rectangle<int>(cells.getX() + i * cellW, cells.getY() + 2, cellW - 1, 12);
+        const bool active = vm.voice(i).isActive();
+        g.setColour(active ? colours::amber.withAlpha(0.85f) : colours::panelDark.brighter(0.12f));
+        g.fillRect(cell);
+        g.setColour(active ? juce::Colours::black : colours::creamDim.withAlpha(0.5f));
+        g.drawText(juce::String(i + 1), cell, juce::Justification::centred);
+    }
+    // Supply sag (amber) + unit drift (green) timeline behind the readout.
+    const auto spark = fingerprintArea.reduced(2);
+    auto drawSpark = [&](const std::vector<float>& h, juce::Colour c, float scale, float mid)
+    {
+        if (h.size() < 2) return;
+        juce::Path path;
+        for (std::size_t i = 0; i < h.size(); ++i)
+        {
+            const float px = spark.getX() + spark.getWidth() * static_cast<float>(i) / static_cast<float>(h.size() - 1);
+            const float py = juce::jlimit(static_cast<float>(spark.getY()), static_cast<float>(spark.getBottom()),
+                                          spark.getCentreY() - (h[i] - mid) * scale * spark.getHeight());
+            i == 0 ? path.startNewSubPath(px, py) : path.lineTo(px, py);
+        }
+        g.setColour(c.withAlpha(0.55f));
+        g.strokePath(path, juce::PathStrokeType(1.0f));
+    };
+    drawSpark(sagHistory, colours::amber, 1.2f, 0.3f);
+    drawSpark(driftHistory, colours::phosphor, 0.25f, 0.0f);
+
+    if (lastActiveVoice >= 0)
+    {
+        const auto& prof = vm.voice(lastActiveVoice).profile();
+        g.setColour(colours::creamDim);
+        g.setFont(vintageFont(8.0f));
+        g.drawText(juce::String::formatted("V%d  %+.1fc  filt%+.0fc  atk x%.2f  vca%+.1fdB",
+                                           lastActiveVoice + 1, prof.osc1TuneCents,
+                                           prof.filterCutoffCents, prof.envAttackScale, prof.vcaGainDb),
+                   fingerprintArea.reduced(4, 0), juce::Justification::centredLeft);
+    }
 }
 
 // ------------------------------------------------------------------ editor --
@@ -429,6 +490,51 @@ const std::vector<Preset>& factoryPresets()
             { p::driftAmount, 5.0f }, { p::driftSpeed, 0.6f }, { p::warmup, 0.6f },
             { p::ampAttack, 0.08f }, { p::reverbMix, 0.3f }, { p::polyphony, 1.0f } } },
 
+        // ---- DNA (demonstration presets, dna.md: effects minimal) ----
+        { "Ideal Mono Bass", "DNA", {
+            { p::character, 0.0f }, { p::cutoff, 500.0f }, { p::subLevel, 0.5f },
+            { p::polyphony, 1.0f }, { p::filterEnvAmt, 0.4f }, { p::filtDecay, 0.3f } } },
+        { "Analog DNA Mono Bass", "DNA", {
+            { p::character, 0.8f }, { p::dnaCondition, 0.5f }, { p::dnaWarmth, 0.6f },
+            { p::dnaAge, 0.4f }, { p::cutoff, 500.0f }, { p::subLevel, 0.5f },
+            { p::polyphony, 1.0f }, { p::filterEnvAmt, 0.4f }, { p::filtDecay, 0.3f } } },
+        { "Warm Oscillator Lead", "DNA", {
+            { p::character, 0.9f }, { p::dnaWarmth, 0.9f }, { p::dnaCalibration, 0.6f },
+            { p::osc2Level, 0.85f }, { p::osc2Fine, 5.0f }, { p::cutoff, 2200.0f },
+            { p::polyphony, 1.0f }, { p::glide, 0.04f } } },
+        { "Aging Poly Chords", "DNA", {
+            { p::character, 1.0f }, { p::dnaAge, 0.9f }, { p::dnaCondition, 0.8f },
+            { p::dnaCalibration, 0.4f }, { p::osc2Level, 0.8f }, { p::cutoff, 2800.0f },
+            { p::ampAttack, 0.05f }, { p::ampRelease, 0.6f }, { p::polyphony, 16.0f } } },
+        { "Voice Round-Robin Keys", "DNA", {
+            { p::character, 1.0f }, { p::dnaCalibration, 0.3f }, { p::dnaCondition, 0.7f },
+            { p::cutoff, 3500.0f }, { p::ampDecay, 0.5f }, { p::ampSustain, 0.4f },
+            { p::filterVel, 0.5f } } },
+        { "Driven Ladder Bass", "DNA", {
+            { p::character, 0.7f }, { p::dnaWarmth, 1.0f }, { p::mixerDrive, 5.0f },
+            { p::filterDrive, 14.0f }, { p::cutoff, 420.0f }, { p::resonance, 0.5f },
+            { p::subLevel, 0.5f }, { p::polyphony, 1.0f }, { p::filtDecay, 0.25f },
+            { p::filterEnvAmt, 0.5f } } },
+        { "Soft Supply Pad", "DNA", {
+            { p::character, 0.9f }, { p::dnaSupply, 0.05f }, { p::dnaWarmth, 0.5f },
+            { p::osc2Level, 0.9f }, { p::osc2Fine, 7.0f }, { p::cutoff, 1800.0f },
+            { p::ampAttack, 0.4f }, { p::ampRelease, 1.0f }, { p::polyphony, 16.0f },
+            { p::unisonCount, 2.0f } } },
+        { "Worn Calibration Brass", "DNA", {
+            { p::character, 1.0f }, { p::dnaCondition, 1.0f }, { p::dnaCalibration, 0.1f },
+            { p::dnaAge, 0.7f }, { p::osc2Level, 0.85f }, { p::cutoff, 900.0f },
+            { p::filterEnvAmt, 0.45f }, { p::filtSustain, 0.4f }, { p::ampAttack, 0.05f } } },
+        { "Clean vs Saturated Seq", "DNA", {
+            { p::character, 0.6f }, { p::dnaWarmth, 0.95f }, { p::arpMode, 1.0f },
+            { p::arpRate, 8.0f }, { p::arpOctaves, 2.0f }, { p::arpGate, 0.45f },
+            { p::cutoff, 1000.0f }, { p::resonance, 0.4f }, { p::filterEnvAmt, 0.5f },
+            { p::filtDecay, 0.15f }, { p::filtSustain, 0.0f }, { p::ampSustain, 0.5f } } },
+        { "Maximum DNA Demo", "DNA", {
+            { p::character, 1.0f }, { p::dnaCondition, 1.0f }, { p::dnaCalibration, 0.0f },
+            { p::dnaWarmth, 1.0f }, { p::dnaSupply, 0.0f }, { p::dnaAge, 1.0f },
+            { p::driftAmount, 6.0f }, { p::warmup, 1.0f }, { p::osc2Level, 0.9f },
+            { p::cutoff, 2000.0f }, { p::polyphony, 16.0f } } },
+
         // ---- ARP ----
         { "Berlin School", "ARP", {
             { p::arpMode, 3.0f }, { p::arpRate, 6.0f }, { p::arpOctaves, 2.0f },
@@ -504,9 +610,10 @@ SappSynthEditor::SappSynthEditor(SappSynthProcessor& proc)
                          &addKnob(p::lfoToPitch, "To Pitch").slider, &addKnob(p::lfoToCutoff, "To Filter").slider };
 
     // Row 3
-    auto& analogSection = addSection("ANALOG CHARACTER");
-    analogSection.slots = { &addKnob(p::character, "Amount").slider, &addKnob(p::driftAmount, "Drift").slider,
-                            &addKnob(p::driftSpeed, "Speed").slider, &addKnob(p::warmup, "Warm-up").slider };
+    auto& analogSection = addSection("ANALOG DNA");
+    analogSection.slots = { &addKnob(p::character, "DNA").slider, &addKnob(p::dnaCondition, "Condition").slider,
+                            &addKnob(p::dnaCalibration, "Calibrate").slider, &addKnob(p::dnaWarmth, "Warmth").slider,
+                            &addKnob(p::dnaSupply, "Supply").slider, &addKnob(p::dnaAge, "Age").slider };
     auto& voiceSection = addSection("VOICES");
     voiceSection.slots = { &addKnob(p::polyphony, "Poly").slider, &addKnob(p::unisonCount, "Unison").slider,
                            &addKnob(p::unisonDetune, "Detune").slider, &addKnob(p::unisonSpread, "Spread").slider,
@@ -565,6 +672,17 @@ SappSynthEditor::SappSynthEditor(SappSynthProcessor& proc)
         refreshSeedLabel();
     };
     addAndMakeVisible(newUnitButton);
+
+    lockButton.setClickingTogglesState(true);
+    lockButton.setToggleState(processor.isSeedLocked(), juce::dontSendNotification);
+    lockButton.setTooltip("Lock the unit identity: NEW UNIT is disabled while locked");
+    lockButton.onClick = [this]
+    {
+        processor.setSeedLocked(lockButton.getToggleState());
+        newUnitButton.setEnabled(!processor.isSeedLocked());
+    };
+    newUnitButton.setEnabled(!processor.isSeedLocked());
+    addAndMakeVisible(lockButton);
 
     seedLabel.setJustificationType(juce::Justification::centredRight);
     seedLabel.setFont(vintageFont(10.0f));
@@ -807,8 +925,10 @@ void SappSynthEditor::resized()
     auto header = area.removeFromTop(44);
     header.removeFromLeft(360); // logo zone (painted)
     header.removeFromRight(40); // pilot lamp zone
-    seedLabel.setBounds(header.removeFromRight(140));
-    newUnitButton.setBounds(header.removeFromRight(92).reduced(0, 9));
+    seedLabel.setBounds(header.removeFromRight(130));
+    lockButton.setBounds(header.removeFromRight(52).reduced(0, 9));
+    header.removeFromRight(4);
+    newUnitButton.setBounds(header.removeFromRight(88).reduced(0, 9));
     header.removeFromRight(8);
     presetBox.setBounds(header.removeFromRight(200).reduced(0, 9));
 

@@ -34,6 +34,7 @@ public:
     }
 
     SynthVoice& voice(int index) noexcept { return voices[static_cast<std::size_t>(index)]; }
+    const SynthVoice& voice(int index) const noexcept { return voices[static_cast<std::size_t>(index)]; }
 
 private:
     SynthVoice* findFreeVoice() noexcept;

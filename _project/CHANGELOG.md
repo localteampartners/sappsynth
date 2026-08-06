@@ -14,6 +14,19 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-08-06 — v0.4.0: Analog DNA expansion
+
+- Shared circuit state: aggregate voice load sags a virtual supply (80 ms
+  attack / 500 ms recovery) that pushes pitch, cutoff and headroom together.
+- DNA macro panel: DNA / Condition / Calibration / Warmth / Supply / Age with
+  a documented correlation graph (docs/analog-dna.md).
+- Extended profiles: per-voice attack scale, sustain offset, VCA bleed;
+  per-unit noise floor and supply stiffness.
+- Three operating modes: Ideal Digital / Analog DNA / Exaggerated
+  Demonstration (Lab cycle button); seed LOCK; voice fingerprint cells +
+  supply/drift timeline in the Lab.
+- 10 DNA demonstration presets; 6 new tests (57 total); auval green.
+
 ## 2026-08-06 — v0.3.0: matte knobs + scales, arpeggiator, FM, 26 presets
 
 - Knob redesign: matte solid bakelite (no gloss), full-length pointers, and
