@@ -14,6 +14,13 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-08-06 — v0.5.0: preset browser + 75 presets (released with Analog DNA)
+
+- Searchable scrollable preset browser (filter by name/category).
+- Bank grown to ~75 presets; new AMBIENT + RHYTHM (generative noise)
+  categories, 12 musical arp patches. Bank moved to FactoryPresets.cpp.
+- Release includes macOS arm64 + Windows x64 binaries; CI + pluginval green.
+
 ## 2026-08-06 — v0.4.0: Analog DNA expansion
 
 - Shared circuit state: aggregate voice load sags a virtual supply (80 ms
