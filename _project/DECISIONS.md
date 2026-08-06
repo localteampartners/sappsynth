@@ -27,13 +27,55 @@ Write decisions where someone smart would reasonably pick differently.
 
 ## Entries
 
-<!-- Newest first. Example below — delete once you have real entries. -->
+## 2026-08-05 — JUCE 8.0.15, not 9.0.0
 
-## YYYY-MM-DD — Example: chose SQLite over Postgres
+**Decision:** pin JUCE to exact tag 8.0.15 via CMake FetchContent.
+**Context:** docs/architecture.md recommends JUCE 9, but 9.0.0 shipped weeks
+before this build and its AudioProcessor/CLAP work is still moving.
+**Alternatives considered:** JUCE 9.0.0 (API churn risk, no field history);
+vendoring JUCE as a git submodule (heavier repo, same pin effect).
+**Tradeoffs:** no built-in CLAP; CLAP needs clap-juce-extensions or the 9.x
+upgrade later. The plugin adapter is deliberately thin so the swap is cheap.
+**Revisit if:** JUCE 9.1+ lands with stable notes, or CLAP becomes a launch
+requirement.
 
-**Decision:** use SQLite with WAL mode for v1.
-**Context:** single-user app, will run on one VPS, expected <1k writes/day.
-**Alternatives considered:** Postgres (heavier ops for no current benefit),
-DuckDB (analytical, not OLTP), plain JSON files (no concurrency safety).
-**Tradeoffs:** can't scale out horizontally; migrations are manual-ish.
-**Revisit if:** multi-user, multi-writer, or dataset >10GB.
+## 2026-08-05 — Header-only DSP core, engine-only .cpp files
+
+**Decision:** DSP components (`source/dsp/`) are header-only; only engine
+orchestration and lab code compile as translation units.
+**Context:** per-sample inner loops (ladder solver, polyBLEP, OU drift) want
+inlining; the plan's repo sketch listed .cpp files per component.
+**Alternatives considered:** .cpp per class (slower hot loops or LTO reliance).
+**Tradeoffs:** slightly slower incremental compiles when a hot header changes.
+**Revisit if:** compile times start hurting or the core grows a public ABI.
+
+## 2026-08-05 — Fixed-point-iteration ZDF ladder (not closed-form, not Huovilainen)
+
+**Decision:** TPT one-pole stages with tanh saturation, global feedback solved
+by 1–3 fixed-point iterations (iteration count = quality mode).
+**Context:** plan §11 demands ZDF behavior, per-stage nonlinearity, and
+solver-as-quality-knob; needed something stable at 192 kHz on day one.
+**Alternatives considered:** Huovilainen explicit model (needs its own tuning
+polynomials, drifts at high cutoff); full Newton solver (2–3× cost for
+inaudible gains at 2x/4x oversampling); linear ladder + output tanh (fails
+the "input level changes resonance character" requirement).
+**Tradeoffs:** Eco (1 iteration) approximates one-sample-delayed feedback;
+self-osc pitch tracks cutoff loosely (~third) pending calibration.
+**Revisit if:** the §11.6 chromatic-calibration experiment demands tighter
+tracking, or Research mode wants a reference solver.
+
+## 2026-08-05 — Triangle = leaky-integrated PolyBLEP square
+
+**Decision:** render triangle by integrating the band-limited square through a
+leaky integrator (gain 4·increment, leak 0.9995).
+**Context:** proper BLAMP correction is fiddly; the integrator inherits the
+square's alias suppression with three lines of code.
+**Tradeoffs:** slight low-frequency droop from the leak; amplitude settles
+over the first cycles after note-on.
+**Revisit if:** High mode adopts real BLAMP/minBLEP oscillators.
+
+## 2026-08-05 — sapp.yml monitor stays paused
+
+**Decision:** no health checks; monitor entry status `paused`.
+**Context:** desktop audio plugin distributed via GitHub — nothing hosted.
+**Revisit if:** binaries get a release/update endpoint worth monitoring.
