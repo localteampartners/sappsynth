@@ -1,32 +1,19 @@
 #!/usr/bin/env bash
 # verify.sh — fast feedback loop for sappsynth.
 #
-# Goal: finish in under 60 seconds. Runs typecheck + lint + tests.
-# Called by /ship, and any time Claude (or you) wants to confirm the
-# project is healthy. If it's slow, this loop stops being useful.
-#
-# Fill in the checks appropriate for your stack. Uncomment what applies
-# and delete the rest.
+# Builds the framework-independent core + tests (no JUCE — that lives in the
+# full `build/` tree) and runs the unit suite. Warm runs finish well under 60s.
 
 set -e
+cd "$(dirname "$0")"
 
-echo "▶ typecheck"
-# npm run typecheck
-# pnpm exec tsc --noEmit
-# uv run mypy .
-# go vet ./...
-# cargo check --all-targets
+echo "▶ configure (core, no plugin)"
+cmake -B build-core -DSAPPSYNTH_BUILD_PLUGIN=OFF -DCMAKE_BUILD_TYPE=Release >/dev/null
 
-echo "▶ lint"
-# npm run lint
-# uv run ruff check .
-# golangci-lint run
-# cargo clippy --all-targets -- -D warnings
+echo "▶ build (strict warnings act as the lint pass)"
+cmake --build build-core -j"$(sysctl -n hw.ncpu 2>/dev/null || nproc)"
 
 echo "▶ tests"
-# npm test
-# uv run pytest -q
-# go test ./...
-# cargo test
+./build-core/sappsynth_tests
 
 echo "✓ verify passed"
