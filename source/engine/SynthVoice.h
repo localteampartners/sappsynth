@@ -23,6 +23,7 @@ struct SharedModulation
     float unitDriftNorm { 0.0f };   // ~N(0,1) correlated unit-wide drift
     float warmupCents { 0.0f };
     float characterAmount { 0.5f };
+    bool driftFrozen { false };     // Lab: hold all drift processes still
 };
 
 // One complete voice card (architecture §15): owns all audio-rate state, has a

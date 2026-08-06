@@ -41,6 +41,9 @@ public:
     void rerollUnitSeed();
     juce::String unitSeedText() const;
 
+    // Lab view access (telemetry tap + A/B flags live on the engine).
+    SynthEngine& synthEngine() noexcept { return engine; }
+
     juce::AudioProcessorValueTreeState apvts;
     juce::MidiKeyboardState keyboardState;
 

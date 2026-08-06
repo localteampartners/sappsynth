@@ -10,6 +10,8 @@
 #include "../dsp/effects/Chorus.h"
 #include "../dsp/effects/Delay.h"
 #include "../dsp/effects/Reverb.h"
+#include "../telemetry/TelemetryBus.h"
+#include <atomic>
 
 namespace sappsynth {
 
@@ -37,6 +39,15 @@ public:
     int activeVoiceCount() const noexcept { return voiceManager.activeVoiceCount(); }
     double sampleRate() const noexcept { return sr; }
 
+    // Lab controls (architecture §19): UI-thread setters, read on the audio
+    // thread as atomics. Ideal mode strips every modeled behavior so the
+    // clean digital core can be A/B'd against the full model.
+    TelemetryBus& telemetry() noexcept { return telemetryBus; }
+    void setLabIdealMode(bool ideal) noexcept { labIdeal.store(ideal, std::memory_order_relaxed); }
+    void setDriftFrozen(bool frozen) noexcept { labDriftFrozen.store(frozen, std::memory_order_relaxed); }
+    bool labIdealMode() const noexcept { return labIdeal.load(std::memory_order_relaxed); }
+    bool driftFrozen() const noexcept { return labDriftFrozen.load(std::memory_order_relaxed); }
+
 private:
     void applyEvent(const Event& event);
     void renderSpan(float* left, float* right, int numSamples);
@@ -58,6 +69,10 @@ private:
     int lastPlayedNote { -1 };
 
     SmoothedValue smCutoff, smResonance, smMixerDrive, smMaster;
+
+    TelemetryBus telemetryBus;
+    std::atomic<bool> labIdeal { false };
+    std::atomic<bool> labDriftFrozen { false };
 
     double sr { 48000.0 };
     QualityMode activeQuality { QualityMode::Normal };

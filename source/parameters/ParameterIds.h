@@ -50,6 +50,18 @@ inline constexpr const char* lfoToPitch    = "lfo.toPitch.cents";
 inline constexpr const char* lfoToCutoff   = "lfo.toCutoff";
 
 inline constexpr const char* polyphony     = "voice.polyphony";
+inline constexpr const char* unisonCount   = "voice.unison.count";
+inline constexpr const char* unisonDetune  = "voice.unison.detune.cents";
+inline constexpr const char* unisonSpread  = "voice.unison.spread";
+inline constexpr const char* glide         = "voice.glide.s";
+
+inline constexpr const char* chorusMix     = "fx.chorus.mix";
+inline constexpr const char* chorusRate    = "fx.chorus.rate.hz";
+inline constexpr const char* delayTime     = "fx.delay.time.s";
+inline constexpr const char* delayFeedback = "fx.delay.feedback";
+inline constexpr const char* delayMix      = "fx.delay.mix";
+inline constexpr const char* reverbSize    = "fx.reverb.size";
+inline constexpr const char* reverbMix     = "fx.reverb.mix";
 
 inline constexpr const char* character     = "variation.amount";
 inline constexpr const char* driftAmount   = "variation.driftCents";

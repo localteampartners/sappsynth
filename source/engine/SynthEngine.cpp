@@ -85,7 +85,8 @@ void SynthEngine::applyEvent(const Event& event)
 void SynthEngine::updateControl(int numSamples)
 {
     sharedMod.lfoValue = lfo.process(numSamples);
-    sharedMod.unitDriftNorm = unitDrift.process(numSamples);
+    sharedMod.unitDriftNorm = labDriftFrozen.load(std::memory_order_relaxed)
+                            ? unitDrift.value() : unitDrift.process(numSamples);
     sharedMod.warmupCents = thermal.advance(numSamples) * effectivePatch_.warmupAmount;
     sharedMod.characterAmount = effectivePatch_.characterAmount;
 
@@ -98,6 +99,20 @@ void SynthEngine::updateControl(int numSamples)
     effectivePatch_.resonance = smResonance.next();
     effectivePatch_.mixerDrive = smMixerDrive.next();
 
+    // Lab ideal mode: strip every modeled behavior — variation, drift,
+    // warm-up, mixer/VCA/output nonlinearity — leaving the clean digital core.
+    if (labIdeal.load(std::memory_order_relaxed))
+    {
+        effectivePatch_.characterAmount = 0.0f;
+        effectivePatch_.driftAmountCents = 0.0f;
+        effectivePatch_.warmupAmount = 0.0f;
+        effectivePatch_.mixerDrive = 1.0f;
+        effectivePatch_.mixerCharacter = 0.0f;
+        effectivePatch_.outputDriveDb = 0.0f;
+    }
+    sharedMod.driftFrozen = labDriftFrozen.load(std::memory_order_relaxed);
+    sharedMod.characterAmount = effectivePatch_.characterAmount;
+
     lfo.setRate(patch_.lfoRateHz);
     lfo.setShape(patch_.lfoShape);
 
@@ -108,7 +123,7 @@ void SynthEngine::updateControl(int numSamples)
     unitDrift.setParameters(theta, sigma);
     thermal.configure(15.0f, 90.0f, 0.9f);
 
-    outputDriveLinear = dbToGain(patch_.outputDriveDb);
+    outputDriveLinear = dbToGain(effectivePatch_.outputDriveDb);
 }
 
 void SynthEngine::renderSpan(float* left, float* right, int numSamples)
@@ -187,6 +202,8 @@ void SynthEngine::process(const RenderBlock& block)
         block.left[i] *= master;
         block.right[i] *= master;
     }
+
+    telemetryBus.push(block.left, block.right, block.numSamples);
 }
 
 } // namespace sappsynth

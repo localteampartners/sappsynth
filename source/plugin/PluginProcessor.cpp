@@ -95,6 +95,21 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     layout.add(std::make_unique<P>(ID{p::lfoToCutoff, 1}, "LFO>Cutoff", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
 
     layout.add(std::make_unique<Pi>(ID{p::polyphony, 1}, "Polyphony", 1, 16, 8));
+    layout.add(std::make_unique<Pi>(ID{p::unisonCount, 1}, "Unison", 1, 5, 1));
+    layout.add(std::make_unique<P>(ID{p::unisonDetune, 1}, "Uni Detune",
+                                   juce::NormalisableRange<float>(0.0f, 50.0f, 0.1f), 12.0f));
+    layout.add(std::make_unique<P>(ID{p::unisonSpread, 1}, "Uni Spread", juce::NormalisableRange<float>(0.0f, 1.0f), 0.7f));
+    layout.add(std::make_unique<P>(ID{p::glide, 1}, "Glide",
+                                   juce::NormalisableRange<float>(0.0f, 1.0f, 0.001f, 0.5f), 0.0f));
+
+    layout.add(std::make_unique<P>(ID{p::chorusMix, 1}, "Chorus", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
+    layout.add(std::make_unique<P>(ID{p::chorusRate, 1}, "Chorus Rate", logRange(0.05f, 4.0f), 0.5f));
+    layout.add(std::make_unique<P>(ID{p::delayTime, 1}, "Delay Time",
+                                   juce::NormalisableRange<float>(0.05f, 1.2f, 0.001f, 0.5f), 0.35f));
+    layout.add(std::make_unique<P>(ID{p::delayFeedback, 1}, "Delay FB", juce::NormalisableRange<float>(0.0f, 0.85f), 0.35f));
+    layout.add(std::make_unique<P>(ID{p::delayMix, 1}, "Delay", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
+    layout.add(std::make_unique<P>(ID{p::reverbSize, 1}, "Verb Size", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+    layout.add(std::make_unique<P>(ID{p::reverbMix, 1}, "Reverb", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
 
     layout.add(std::make_unique<P>(ID{p::character, 1}, "Character", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
     layout.add(std::make_unique<P>(ID{p::driftAmount, 1}, "Drift",
@@ -162,6 +177,18 @@ PatchState SappSynthProcessor::buildPatchFromParameters()
     patch.lfoToCutoff = value(p::lfoToCutoff);
 
     patch.polyphony = choice(p::polyphony);
+    patch.unisonCount = choice(p::unisonCount);
+    patch.unisonDetuneCents = value(p::unisonDetune);
+    patch.unisonSpread = value(p::unisonSpread);
+    patch.glideSeconds = value(p::glide);
+
+    patch.chorusMix = value(p::chorusMix);
+    patch.chorusRateHz = value(p::chorusRate);
+    patch.delayTimeS = value(p::delayTime);
+    patch.delayFeedback = value(p::delayFeedback);
+    patch.delayMix = value(p::delayMix);
+    patch.reverbSize = value(p::reverbSize);
+    patch.reverbMix = value(p::reverbMix);
 
     patch.characterAmount = value(p::character);
     patch.driftAmountCents = value(p::driftAmount);

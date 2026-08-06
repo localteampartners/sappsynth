@@ -124,10 +124,11 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
     const float character = mod.characterAmount;
 
     // ---- control-rate update -------------------------------------------
-    // Correlated drift blend (architecture §9.4).
-    const float vDrift = voiceDrift.process(n);
-    const float o1Local = osc1Drift.process(n);
-    const float o2Local = osc2Drift.process(n);
+    // Correlated drift blend (architecture §9.4). Frozen in Lab mode: hold
+    // the current values so the listener can isolate what drift adds.
+    const float vDrift = mod.driftFrozen ? voiceDrift.value() : voiceDrift.process(n);
+    const float o1Local = mod.driftFrozen ? osc1Drift.value() : osc1Drift.process(n);
+    const float o2Local = mod.driftFrozen ? osc2Drift.value() : osc2Drift.process(n);
     const float driftScale = patch.driftAmountCents;
     const float drift1 = (0.35f * mod.unitDriftNorm + 0.45f * vDrift + 0.20f * o1Local) * driftScale;
     const float drift2 = (0.35f * mod.unitDriftNorm + 0.45f * vDrift + 0.20f * o2Local) * driftScale;

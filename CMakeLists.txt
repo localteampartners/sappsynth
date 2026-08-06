@@ -94,12 +94,21 @@ if(SAPPSYNTH_BUILD_PLUGIN)
     FORMATS                     Standalone VST3 AU
   )
 
+  juce_add_binary_data(SappSynthAssets SOURCES
+    assets/wood_side.png
+    assets/panel.png
+    assets/knob_cream.png
+    assets/knob_black.png
+    assets/screw.png
+  )
+
   target_sources(SappSynthPlugin PRIVATE
     source/plugin/PluginProcessor.cpp
     source/plugin/PluginEditor.cpp
   )
   target_link_libraries(SappSynthPlugin PRIVATE
     sappsynth_core
+    SappSynthAssets
     juce::juce_audio_utils
     juce::juce_dsp
     PUBLIC
@@ -112,4 +121,23 @@ if(SAPPSYNTH_BUILD_PLUGIN)
     JUCE_VST3_CAN_REPLACE_VST2=0
     JUCE_DISPLAY_SPLASH_SCREEN=0
   )
+
+  if(APPLE)
+    # Offscreen editor snapshot tool (UI verification without screen capture).
+    juce_add_gui_app(SappUiShot PRODUCT_NAME "SappUiShot")
+    target_sources(SappUiShot PRIVATE
+      tools/sapp-uishot/main.cpp
+      source/plugin/PluginProcessor.cpp
+      source/plugin/PluginEditor.cpp
+    )
+    target_include_directories(SappUiShot PRIVATE source/plugin)
+    target_link_libraries(SappUiShot PRIVATE
+      sappsynth_core
+      SappSynthAssets
+      juce::juce_audio_utils
+      juce::juce_dsp
+      juce::juce_recommended_config_flags
+    )
+    target_compile_definitions(SappUiShot PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  endif()
 endif()
