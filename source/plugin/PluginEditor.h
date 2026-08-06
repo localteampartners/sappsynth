@@ -24,6 +24,7 @@ public:
                               bool highlighted, bool down) override;
     juce::Font getComboBoxFont(juce::ComboBox&) override;
     juce::Font getTextButtonFont(juce::TextButton&, int buttonHeight) override;
+    void positionComboBoxText(juce::ComboBox&, juce::Label&) override;
 
     juce::Image woodImage, panelImage, screwImage;
     juce::Image knobCream, knobBlack;

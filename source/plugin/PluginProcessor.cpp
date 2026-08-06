@@ -38,8 +38,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     using ID = juce::ParameterID;
     namespace p = param;
 
-    const juce::StringArray waves { "Sine", "Saw", "Pulse", "Triangle" };
-    const juce::StringArray lfoShapes { "Sine", "Triangle", "Saw", "Square" };
+    const juce::StringArray waves { "Sine", "Saw", "Pulse", "Tri" };
+    const juce::StringArray lfoShapes { "Sine", "Tri", "Saw", "Sqr" };
 
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
@@ -59,9 +59,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     };
     oscGroup(p::osc1Wave, p::osc1Octave, p::osc1Semi, p::osc1Fine, p::osc1Pw, p::osc1Level, "Osc 1", 1, 1.0f);
     oscGroup(p::osc2Wave, p::osc2Octave, p::osc2Semi, p::osc2Fine, p::osc2Pw, p::osc2Level, "Osc 2", 1, 0.0f);
+    layout.add(std::make_unique<P>(ID{p::osc2Fm, 1}, "Osc2>1 FM",
+                                   juce::NormalisableRange<float>(0.0f, 1.0f, 0.0f, 0.6f), 0.0f));
 
-    layout.add(std::make_unique<Pc>(ID{p::subOctave, 1}, "Sub Octave", juce::StringArray { "-1 Oct", "-2 Oct" }, 0));
-    layout.add(std::make_unique<Pc>(ID{p::subWave, 1}, "Sub Wave", juce::StringArray { "Square", "Sine" }, 0));
+    layout.add(std::make_unique<Pc>(ID{p::subOctave, 1}, "Sub Octave", juce::StringArray { "-1", "-2" }, 0));
+    layout.add(std::make_unique<Pc>(ID{p::subWave, 1}, "Sub Wave", juce::StringArray { "Sqr", "Sine" }, 0));
     layout.add(std::make_unique<P>(ID{p::subLevel, 1}, "Sub Level", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
     layout.add(std::make_unique<P>(ID{p::noiseLevel, 1}, "Noise Level", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
 
@@ -101,6 +103,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     layout.add(std::make_unique<P>(ID{p::unisonSpread, 1}, "Uni Spread", juce::NormalisableRange<float>(0.0f, 1.0f), 0.7f));
     layout.add(std::make_unique<P>(ID{p::glide, 1}, "Glide",
                                    juce::NormalisableRange<float>(0.0f, 1.0f, 0.001f, 0.5f), 0.0f));
+
+    layout.add(std::make_unique<Pc>(ID{p::arpMode, 1}, "Arp Mode",
+                                    juce::StringArray { "Off", "Up", "Down", "UpDown", "Random" }, 0));
+    layout.add(std::make_unique<P>(ID{p::arpRate, 1}, "Arp Rate", logRange(0.5f, 20.0f), 8.0f));
+    layout.add(std::make_unique<Pi>(ID{p::arpOctaves, 1}, "Arp Octaves", 1, 3, 1));
+    layout.add(std::make_unique<P>(ID{p::arpGate, 1}, "Arp Gate",
+                                   juce::NormalisableRange<float>(0.05f, 0.95f), 0.5f));
 
     layout.add(std::make_unique<P>(ID{p::chorusMix, 1}, "Chorus", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
     layout.add(std::make_unique<P>(ID{p::chorusRate, 1}, "Chorus Rate", logRange(0.05f, 4.0f), 0.5f));
@@ -147,6 +156,7 @@ PatchState SappSynthProcessor::buildPatchFromParameters()
     fillOsc(patch.osc1, p::osc1Wave, p::osc1Octave, p::osc1Semi, p::osc1Fine, p::osc1Pw, p::osc1Level);
     fillOsc(patch.osc2, p::osc2Wave, p::osc2Octave, p::osc2Semi, p::osc2Fine, p::osc2Pw, p::osc2Level);
 
+    patch.osc2ToOsc1Fm = value(p::osc2Fm);
     patch.subOctave = choice(p::subOctave) + 1;
     patch.subWaveform = choice(p::subWave) == 0 ? Waveform::Pulse : Waveform::Sine;
     patch.subLevel = value(p::subLevel);
@@ -181,6 +191,10 @@ PatchState SappSynthProcessor::buildPatchFromParameters()
     patch.unisonDetuneCents = value(p::unisonDetune);
     patch.unisonSpread = value(p::unisonSpread);
     patch.glideSeconds = value(p::glide);
+    patch.arpMode = choice(p::arpMode);
+    patch.arpRateHz = value(p::arpRate);
+    patch.arpOctaves = choice(p::arpOctaves);
+    patch.arpGate = value(p::arpGate);
 
     patch.chorusMix = value(p::chorusMix);
     patch.chorusRateHz = value(p::chorusRate);

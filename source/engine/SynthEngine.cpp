@@ -19,6 +19,12 @@ void SynthEngine::prepare(double sampleRate, int maxBlockSize)
     unitDrift.prepare(sr);
     unitDrift.seed(seeds::combine(unitSeed_, 0x0D21F7ull));
     thermal.prepare(sr);
+    arpRng.seed(seeds::combine(unitSeed_, 0xA49ull));
+    arpHeldCount = 0;
+    arpSoundingNote = -1;
+    arpStepIndex = 0;
+    arpStepCountdown = 0.0;
+    arpGateCountdown = 0.0;
 
     smCutoff.prepare(sr / SynthVoice::kControlInterval, 0.010f);
     smResonance.prepare(sr / SynthVoice::kControlInterval, 0.005f);
@@ -59,27 +65,148 @@ void SynthEngine::setPatch(const PatchState& patch)
     patch_ = patch;
 }
 
+void SynthEngine::arpAddHeld(int note, float velocity)
+{
+    if (arpHeldCount >= 16)
+        return;
+    for (int i = 0; i < arpHeldCount; ++i)
+        if (arpHeld[i].note == note)
+            return;
+    // Keep sorted by pitch so Up/Down patterns are stable.
+    int pos = arpHeldCount;
+    while (pos > 0 && arpHeld[pos - 1].note > note)
+    {
+        arpHeld[pos] = arpHeld[pos - 1];
+        --pos;
+    }
+    arpHeld[pos] = { note, velocity };
+    ++arpHeldCount;
+}
+
+void SynthEngine::arpRemoveHeld(int note)
+{
+    for (int i = 0; i < arpHeldCount; ++i)
+        if (arpHeld[i].note == note)
+        {
+            for (int j = i; j < arpHeldCount - 1; ++j)
+                arpHeld[j] = arpHeld[j + 1];
+            --arpHeldCount;
+            return;
+        }
+}
+
 void SynthEngine::applyEvent(const Event& event)
 {
+    const bool arpOn = effectivePatch_.arpMode > 0;
     switch (event.type)
     {
         case Event::Type::NoteOn:
             if (event.velocity > 0.0f)
             {
-                voiceManager.noteOn(event.note, std::clamp(event.velocity, 0.0f, 1.0f),
-                                    effectivePatch_, unitProfile_, lastPlayedNote);
-                lastPlayedNote = event.note;
+                if (arpOn)
+                {
+                    arpAddHeld(event.note, std::clamp(event.velocity, 0.0f, 1.0f));
+                }
+                else
+                {
+                    voiceManager.noteOn(event.note, std::clamp(event.velocity, 0.0f, 1.0f),
+                                        effectivePatch_, unitProfile_, lastPlayedNote);
+                    lastPlayedNote = event.note;
+                }
             }
             else
+            {
+                arpRemoveHeld(event.note);
                 voiceManager.noteOff(event.note);
+            }
             break;
         case Event::Type::NoteOff:
+            arpRemoveHeld(event.note);
             voiceManager.noteOff(event.note);
             break;
         case Event::Type::AllNotesOff:
+            arpHeldCount = 0;
             voiceManager.allNotesOff();
             break;
     }
+}
+
+void SynthEngine::processArp(int numSamples)
+{
+    if (effectivePatch_.arpMode <= 0)
+    {
+        if (arpSoundingNote >= 0)
+        {
+            voiceManager.noteOff(arpSoundingNote);
+            arpSoundingNote = -1;
+        }
+        arpStepCountdown = 0.0;
+        arpStepIndex = 0;
+        arpDirection = 1;
+        return;
+    }
+
+    // Gate: end the sounding step-note partway through the step.
+    arpGateCountdown -= numSamples;
+    if (arpGateCountdown <= 0.0 && arpSoundingNote >= 0)
+    {
+        voiceManager.noteOff(arpSoundingNote);
+        arpSoundingNote = -1;
+    }
+
+    if (arpHeldCount == 0)
+        return;
+
+    arpStepCountdown -= numSamples;
+    if (arpStepCountdown > 0.0)
+        return;
+
+    const double stepLength = sr / std::clamp(effectivePatch_.arpRateHz, 0.25f, 30.0f);
+    arpStepCountdown += stepLength;
+    if (arpStepCountdown <= 0.0) // rate went up a lot; resync
+        arpStepCountdown = stepLength;
+
+    const int octaves = std::clamp(effectivePatch_.arpOctaves, 1, 3);
+    const int totalSteps = arpHeldCount * octaves;
+
+    int step = 0;
+    switch (effectivePatch_.arpMode)
+    {
+        case 1: // Up
+            step = arpStepIndex % totalSteps;
+            ++arpStepIndex;
+            break;
+        case 2: // Down
+            step = totalSteps - 1 - (arpStepIndex % totalSteps);
+            ++arpStepIndex;
+            break;
+        case 3: // Up-Down (ends don't repeat)
+        {
+            if (totalSteps == 1)
+                step = 0;
+            else
+            {
+                const int cycle = 2 * totalSteps - 2;
+                const int phase = arpStepIndex % cycle;
+                step = phase < totalSteps ? phase : cycle - phase;
+            }
+            ++arpStepIndex;
+            break;
+        }
+        default: // Random
+            step = static_cast<int>(arpRng.nextUInt64() % static_cast<std::uint64_t>(totalSteps));
+            break;
+    }
+
+    const auto& held = arpHeld[step % arpHeldCount];
+    const int note = held.note + 12 * (step / arpHeldCount);
+
+    if (arpSoundingNote >= 0)
+        voiceManager.noteOff(arpSoundingNote);
+    voiceManager.noteOn(note, held.velocity, effectivePatch_, unitProfile_, lastPlayedNote);
+    lastPlayedNote = note;
+    arpSoundingNote = note;
+    arpGateCountdown = stepLength * std::clamp(effectivePatch_.arpGate, 0.05f, 0.98f);
 }
 
 void SynthEngine::updateControl(int numSamples)
@@ -133,6 +260,7 @@ void SynthEngine::renderSpan(float* left, float* right, int numSamples)
     {
         const int chunk = std::min(SynthVoice::kControlInterval, numSamples - offset);
         updateControl(chunk);
+        processArp(chunk);
 
         voiceManager.forEachActiveVoice([&](SynthVoice& voice)
         {

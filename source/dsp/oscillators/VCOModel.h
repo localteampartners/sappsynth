@@ -43,9 +43,13 @@ public:
         increment = std::clamp(hz / sr, 0.0, 0.45);
     }
 
-    float tick(float pulseWidth) noexcept
+    // fmMultiplier scales this sample's frequency (1 = no modulation);
+    // clamped non-negative — no through-zero FM in this model.
+    float tick(float pulseWidth, float fmMultiplier = 1.0f) noexcept
     {
-        return osc.tick(increment, std::clamp(pulseWidth, 0.05f, 0.95f));
+        const double inc = std::clamp(increment * static_cast<double>(std::max(fmMultiplier, 0.0f)),
+                                      0.0, 0.45);
+        return osc.tick(inc, std::clamp(pulseWidth, 0.05f, 0.95f));
     }
 
     double phaseIncrement() const noexcept { return increment; }

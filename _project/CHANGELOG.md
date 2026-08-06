@@ -14,6 +14,21 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-08-06 — v0.3.0: matte knobs + scales, arpeggiator, FM, 26 presets
+
+- Knob redesign: matte solid bakelite (no gloss), full-length pointers, and
+  graduated 0-10 tick/numeral scales drawn around every knob.
+- Fine control: 320px drag throw, cmd/ctrl-drag ultra-fine, double-click
+  resets to default.
+- Arpeggiator: Up / Down / UpDown / Random, 0.5-20 Hz, 1-3 octaves, gate.
+- Osc2 -> Osc1 audio-rate FM (clamped, no through-zero) for FM-style EPs,
+  bells, clangs.
+- Preset bank grown to 26 in categories: BASS / LEAD / KEYS / FM / PAD / ARP
+  (Model Growl, Taurus Rumble, Hoover Rave, FM E-Piano, FM Bells, Jupiter
+  Sweep Pad, Polysix Strings, Berlin School, Disco Octaves, ...).
+- 51 tests green (arp rate/order/stop, FM sidebands); auval + pluginval pass.
+- v0.2.0 release also gained Windows x64 VST3/Standalone from CI.
+
 ## 2026-08-06 — v0.2.0: vintage hardware UI, effects, unison, Lab view, CI
 
 - Vintage panel: procedurally generated photoreal assets (walnut cheeks,

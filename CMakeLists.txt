@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(SappSynth VERSION 0.1.0 LANGUAGES C CXX)
+project(SappSynth VERSION 0.3.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -49,6 +49,7 @@ if(SAPPSYNTH_BUILD_TESTS)
     tests/unit/test_drift.cpp
     tests/unit/test_engine.cpp
     tests/unit/test_effects.cpp
+    tests/unit/test_arp.cpp
   )
   target_link_libraries(sappsynth_tests PRIVATE sappsynth_core Catch2::Catch2WithMain)
   sappsynth_set_warnings(sappsynth_tests)

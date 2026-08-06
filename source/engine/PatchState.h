@@ -29,6 +29,10 @@ struct PatchState
     float subLevel { 0.0f };
     float noiseLevel { 0.0f };
 
+    // Audio-rate cross-modulation: osc2 output modulates osc1 frequency
+    // (classic FM/clang territory; §8.5). 0..1 panel value.
+    float osc2ToOsc1Fm { 0.0f };
+
     float mixerDrive { 1.0f };      // 1..8 linear
     float mixerCharacter { 0.1f };  // 0..1 -> asymmetry
 
@@ -48,6 +52,12 @@ struct PatchState
     float lfoToCutoff { 0.0f };       // 0..1 -> +-3 octaves
 
     int polyphony { 8 };              // 1..16
+
+    // Arpeggiator: 0=Off, 1=Up, 2=Down, 3=Up-Down, 4=Random.
+    int arpMode { 0 };
+    float arpRateHz { 8.0f };         // steps per second
+    int arpOctaves { 1 };             // 1..3
+    float arpGate { 0.5f };           // fraction of a step the note sounds
 
     // Unison stacks voice cards per note (center-preserving detune, stereo
     // spread, 1/sqrt(N) gain compensation). Eats polyphony, like hardware.

@@ -62,14 +62,45 @@ void VintageLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
     if (!strip.isValid())
         return;
 
-    const int frame = juce::jlimit(0, kFrames - 1, juce::roundToInt(pos * (kFrames - 1)));
-    const int maxSize = small ? 62 : 78;
-    const int size = juce::jmin(width, height, maxSize);
-    const int dx = x + (width - size) / 2;
-    const int dy = y + (height - size) / 2;
+    const int cell = juce::jmin(width, height, small ? 66 : 86);
+    const float cx = static_cast<float>(x) + static_cast<float>(width) * 0.5f;
+    const float cy = static_cast<float>(y) + static_cast<float>(height) * 0.5f;
 
+    // Graduated 0-10 panel scale: the knob reads at a glance from its pointer.
+    const float knobSize = static_cast<float>(cell) * 0.72f;
+    const float tickInner = knobSize * 0.54f;
+    const float tickOuter = knobSize * 0.62f;
+    const float numeralRadius = knobSize * 0.76f;
+    const float startAngle = juce::degreesToRadians(-135.0f);
+    const float endAngle = juce::degreesToRadians(135.0f);
+
+    g.setColour(juce::Colour(0xffb9b2a0).withAlpha(0.85f));
+    for (int i = 0; i <= 10; ++i)
+    {
+        const float a = startAngle + (endAngle - startAngle) * static_cast<float>(i) / 10.0f;
+        const float sa = std::sin(a), ca = -std::cos(a);
+        const bool major = small ? (i % 5 == 0) : (i % 2 == 0);
+        const float inner = major ? tickInner : tickInner + (tickOuter - tickInner) * 0.35f;
+        g.drawLine(cx + sa * inner, cy + ca * inner, cx + sa * tickOuter, cy + ca * tickOuter,
+                   major ? 1.4f : 0.9f);
+    }
+    g.setFont(juce::Font(juce::FontOptions("Futura", small ? 7.5f : 8.5f, juce::Font::bold)));
+    for (int i = 0; i <= 10; i += small ? 10 : 5)
+    {
+        const float a = startAngle + (endAngle - startAngle) * static_cast<float>(i) / 10.0f;
+        const float sa = std::sin(a), ca = -std::cos(a);
+        g.drawText(juce::String(i),
+                   juce::Rectangle<float>(16.0f, 10.0f)
+                       .withCentre({ cx + sa * numeralRadius, cy + ca * numeralRadius })
+                       .toNearestInt(),
+                   juce::Justification::centred);
+    }
+
+    const int frame = juce::jlimit(0, kFrames - 1, juce::roundToInt(pos * (kFrames - 1)));
+    const int size = static_cast<int>(knobSize);
     g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
-    g.drawImage(strip, dx, dy, size, size, 0, frame * kFrameSize, kFrameSize, kFrameSize);
+    g.drawImage(strip, static_cast<int>(cx) - size / 2, static_cast<int>(cy) - size / 2,
+                size, size, 0, frame * kFrameSize, kFrameSize, kFrameSize);
 }
 
 void VintageLookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool,
@@ -112,7 +143,14 @@ void VintageLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& b
     }
 }
 
-juce::Font VintageLookAndFeel::getComboBoxFont(juce::ComboBox&) { return vintageFont(12.5f); }
+juce::Font VintageLookAndFeel::getComboBoxFont(juce::ComboBox&) { return vintageFont(11.5f); }
+
+void VintageLookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& label)
+{
+    // Narrow panel cells: give the text everything except the arrow.
+    label.setBounds(4, 1, box.getWidth() - 20, box.getHeight() - 2);
+    label.setFont(getComboBoxFont(box));
+}
 juce::Font VintageLookAndFeel::getTextButtonFont(juce::TextButton&, int) { return vintageFont(11.5f, true); }
 
 // --------------------------------------------------------------- lab panel --
@@ -257,55 +295,166 @@ void LabPanel::paint(juce::Graphics& g)
 namespace {
 
 struct PresetValue { const char* id; float value; };
-struct Preset { const char* name; std::vector<PresetValue> values; };
+struct Preset { const char* name; const char* category; std::vector<PresetValue> values; };
 
 const std::vector<Preset>& factoryPresets()
 {
     namespace p = param;
     static const std::vector<Preset> presets {
-        { "Init", {} },
-        { "Warm Brass", {
-            { p::osc2Level, 0.85f }, { p::osc2Fine, 4.0f }, { p::cutoff, 750.0f },
-            { p::resonance, 0.15f }, { p::filterEnvAmt, 0.45f }, { p::filtDecay, 0.35f },
-            { p::filtSustain, 0.4f }, { p::ampAttack, 0.04f }, { p::ampRelease, 0.3f },
-            { p::mixerDrive, 2.2f }, { p::character, 0.7f }, { p::driftAmount, 2.0f },
-            { p::chorusMix, 0.2f }, { p::reverbMix, 0.18f } } },
-        { "Acid Bass", {
+        { "Init", "INIT", {} },
+
+        // ---- BASS ----
+        { "Acid Bass", "BASS", {
             { p::cutoff, 240.0f }, { p::resonance, 0.88f }, { p::filterEnvAmt, 0.75f },
             { p::filtDecay, 0.18f }, { p::filtSustain, 0.0f }, { p::keyTrack, 0.8f },
             { p::filterDrive, 10.0f }, { p::subLevel, 0.4f }, { p::ampDecay, 0.3f },
             { p::ampRelease, 0.12f }, { p::polyphony, 1.0f }, { p::filterVel, 0.6f },
             { p::glide, 0.06f }, { p::delayMix, 0.22f }, { p::delayTime, 0.19f },
             { p::delayFeedback, 0.45f } } },
-        { "PWM Strings", {
-            { p::osc1Wave, 2.0f }, { p::osc1Pw, 0.32f }, { p::osc2Wave, 2.0f },
-            { p::osc2Pw, 0.68f }, { p::osc2Fine, -6.0f }, { p::osc2Level, 0.8f },
-            { p::cutoff, 3800.0f }, { p::ampAttack, 0.25f }, { p::ampRelease, 0.8f },
-            { p::lfoRate, 0.8f }, { p::lfoToPitch, 3.0f }, { p::character, 0.8f },
-            { p::driftAmount, 2.5f }, { p::chorusMix, 0.5f }, { p::reverbMix, 0.3f } } },
-        { "Drift Pad", {
+        { "Model Growl", "BASS", {
+            { p::osc2Level, 0.9f }, { p::osc2Fine, -8.0f }, { p::subLevel, 0.6f },
+            { p::cutoff, 350.0f }, { p::resonance, 0.25f }, { p::filterEnvAmt, 0.55f },
+            { p::filtDecay, 0.25f }, { p::filtSustain, 0.1f }, { p::keyTrack, 0.4f },
+            { p::mixerDrive, 3.5f }, { p::filterDrive, 8.0f }, { p::character, 0.8f },
+            { p::polyphony, 1.0f }, { p::glide, 0.04f }, { p::ampRelease, 0.2f } } },
+        { "Taurus Rumble", "BASS", {
+            { p::osc1Octave, -1.0f }, { p::subOctave, 1.0f }, { p::subLevel, 0.8f },
+            { p::cutoff, 200.0f }, { p::mixerDrive, 3.0f }, { p::outputDrive, 6.0f },
+            { p::polyphony, 1.0f }, { p::glide, 0.08f }, { p::ampRelease, 0.4f },
+            { p::character, 0.9f }, { p::filterEnvAmt, 0.3f }, { p::filtDecay, 0.4f } } },
+
+        // ---- LEAD ----
+        { "Fat Fifth Lead", "LEAD", {
+            { p::osc2Semi, 7.0f }, { p::osc2Level, 0.9f }, { p::cutoff, 2500.0f },
+            { p::resonance, 0.3f }, { p::polyphony, 1.0f }, { p::glide, 0.05f },
+            { p::character, 0.7f }, { p::delayMix, 0.25f }, { p::unisonCount, 2.0f },
+            { p::unisonDetune, 8.0f }, { p::filterVel, 0.4f } } },
+        { "Lucky Lead", "LEAD", {
+            { p::osc2Level, 0.9f }, { p::osc2Fine, 6.0f }, { p::unisonCount, 3.0f },
+            { p::unisonDetune, 10.0f }, { p::cutoff, 1800.0f }, { p::filterEnvAmt, 0.4f },
+            { p::filterVel, 0.5f }, { p::ampDecay, 0.5f }, { p::delayMix, 0.2f },
+            { p::character, 0.6f } } },
+        { "Hoover Rave", "LEAD", {
+            { p::osc2Wave, 2.0f }, { p::osc2Pw, 0.4f }, { p::osc2Level, 0.9f },
+            { p::unisonCount, 5.0f }, { p::unisonDetune, 35.0f }, { p::unisonSpread, 1.0f },
+            { p::cutoff, 3000.0f }, { p::glide, 0.15f }, { p::chorusMix, 0.4f },
+            { p::ampAttack, 0.02f }, { p::character, 0.6f }, { p::polyphony, 10.0f } } },
+        { "Whistle (Self-Osc)", "LEAD", {
+            { p::osc1Level, 0.0f }, { p::noiseLevel, 0.06f }, { p::cutoff, 880.0f },
+            { p::resonance, 1.0f }, { p::keyTrack, 1.0f }, { p::filterEnvAmt, 0.0f },
+            { p::ampAttack, 0.02f }, { p::ampRelease, 0.5f }, { p::quality, 2.0f },
+            { p::reverbMix, 0.35f } } },
+
+        // ---- KEYS ----
+        { "Juno Chorus Keys", "KEYS", {
+            { p::subLevel, 0.5f }, { p::cutoff, 4500.0f }, { p::ampAttack, 0.01f },
+            { p::ampDecay, 0.4f }, { p::ampSustain, 0.6f }, { p::chorusMix, 0.6f },
+            { p::character, 0.6f }, { p::filterVel, 0.4f }, { p::ampRelease, 0.3f } } },
+        { "Vintage Organ", "KEYS", {
+            { p::osc1Wave, 0.0f }, { p::osc2Wave, 0.0f }, { p::osc2Octave, 1.0f },
+            { p::osc2Level, 0.5f }, { p::subWave, 1.0f }, { p::subLevel, 0.8f },
+            { p::cutoff, 8000.0f }, { p::ampAttack, 0.005f }, { p::ampSustain, 1.0f },
+            { p::ampRelease, 0.06f }, { p::chorusMix, 0.3f }, { p::character, 0.5f } } },
+        { "Punchy Pluck", "KEYS", {
+            { p::osc2Wave, 2.0f }, { p::osc2Semi, -12.0f }, { p::osc2Level, 0.6f },
+            { p::cutoff, 900.0f }, { p::resonance, 0.35f }, { p::filterEnvAmt, 0.8f },
+            { p::filtDecay, 0.12f }, { p::filtSustain, 0.0f }, { p::ampDecay, 0.35f },
+            { p::ampSustain, 0.0f }, { p::ampRelease, 0.25f }, { p::keyTrack, 1.0f },
+            { p::filterVel, 0.6f }, { p::character, 0.6f }, { p::delayMix, 0.18f } } },
+        { "Warm Brass", "KEYS", {
+            { p::osc2Level, 0.85f }, { p::osc2Fine, 4.0f }, { p::cutoff, 750.0f },
+            { p::resonance, 0.15f }, { p::filterEnvAmt, 0.45f }, { p::filtDecay, 0.35f },
+            { p::filtSustain, 0.4f }, { p::ampAttack, 0.04f }, { p::ampRelease, 0.3f },
+            { p::mixerDrive, 2.2f }, { p::character, 0.7f }, { p::driftAmount, 2.0f },
+            { p::chorusMix, 0.2f }, { p::reverbMix, 0.18f } } },
+
+        // ---- FM ----
+        { "FM E-Piano", "FM", {
+            { p::osc1Wave, 0.0f }, { p::osc2Wave, 0.0f }, { p::osc2Octave, 1.0f },
+            { p::osc2Semi, 7.0f }, { p::osc2Level, 0.0f }, { p::osc2Fm, 0.35f },
+            { p::cutoff, 8000.0f }, { p::ampDecay, 0.8f }, { p::ampSustain, 0.3f },
+            { p::ampRelease, 0.4f }, { p::filterVel, 0.5f }, { p::character, 0.4f },
+            { p::reverbMix, 0.15f }, { p::chorusMix, 0.25f } } },
+        { "FM Bells", "FM", {
+            { p::osc1Wave, 0.0f }, { p::osc2Wave, 0.0f }, { p::osc2Octave, 1.0f },
+            { p::osc2Semi, 7.0f }, { p::osc2Fine, 30.0f }, { p::osc2Level, 0.0f },
+            { p::osc2Fm, 0.5f }, { p::cutoff, 12000.0f }, { p::ampAttack, 0.005f },
+            { p::ampDecay, 1.5f }, { p::ampSustain, 0.0f }, { p::ampRelease, 1.5f },
+            { p::reverbMix, 0.4f }, { p::reverbSize, 0.7f }, { p::character, 0.3f } } },
+        { "Glass Clang", "FM", {
+            { p::osc1Wave, 3.0f }, { p::osc2Wave, 2.0f }, { p::osc2Octave, 1.0f },
+            { p::osc2Semi, 6.0f }, { p::osc2Level, 0.2f }, { p::osc2Fm, 0.7f },
+            { p::mixerDrive, 2.0f }, { p::cutoff, 9000.0f }, { p::ampDecay, 0.6f },
+            { p::ampSustain, 0.0f }, { p::ampRelease, 0.5f }, { p::delayMix, 0.3f } } },
+        { "Metal Drone", "FM", {
+            { p::osc2Octave, -1.0f }, { p::osc2Fine, 13.0f }, { p::osc2Level, 0.5f },
+            { p::osc2Fm, 0.9f }, { p::resonance, 0.5f }, { p::cutoff, 1200.0f },
+            { p::character, 1.0f }, { p::driftAmount, 4.0f }, { p::reverbMix, 0.5f },
+            { p::ampAttack, 0.5f }, { p::ampRelease, 2.0f }, { p::quality, 2.0f } } },
+
+        // ---- PAD / STRINGS ----
+        { "Drift Pad", "PAD", {
             { p::osc2Level, 0.9f }, { p::osc2Fine, 9.0f }, { p::subLevel, 0.5f },
             { p::cutoff, 1600.0f }, { p::ampAttack, 0.6f }, { p::ampRelease, 1.2f },
             { p::filtAttack, 0.8f }, { p::filterEnvAmt, 0.3f }, { p::character, 1.0f },
             { p::driftAmount, 4.0f }, { p::driftSpeed, 0.3f }, { p::warmup, 0.4f },
             { p::quality, 2.0f }, { p::reverbMix, 0.42f }, { p::reverbSize, 0.8f },
             { p::delayMix, 0.18f }, { p::delayTime, 0.55f } } },
-        { "Punchy Pluck", {
-            { p::osc2Wave, 2.0f }, { p::osc2Semi, -12.0f }, { p::osc2Level, 0.6f },
-            { p::cutoff, 900.0f }, { p::resonance, 0.35f }, { p::filterEnvAmt, 0.8f },
-            { p::filtDecay, 0.12f }, { p::filtSustain, 0.0f }, { p::ampDecay, 0.35f },
-            { p::ampSustain, 0.0f }, { p::ampRelease, 0.25f }, { p::keyTrack, 1.0f },
-            { p::filterVel, 0.6f }, { p::character, 0.6f }, { p::delayMix, 0.18f } } },
-        { "Super Saw Stack", {
+        { "Jupiter Sweep Pad", "PAD", {
+            { p::osc2Level, 0.9f }, { p::osc2Fine, 5.0f }, { p::osc1Fine, -5.0f },
+            { p::cutoff, 900.0f }, { p::lfoToCutoff, 0.35f }, { p::lfoRate, 0.15f },
+            { p::ampAttack, 0.8f }, { p::ampRelease, 1.6f }, { p::chorusMix, 0.45f },
+            { p::reverbMix, 0.35f }, { p::character, 0.8f }, { p::polyphony, 16.0f },
+            { p::unisonCount, 2.0f }, { p::unisonDetune, 9.0f } } },
+        { "PWM Strings", "PAD", {
+            { p::osc1Wave, 2.0f }, { p::osc1Pw, 0.32f }, { p::osc2Wave, 2.0f },
+            { p::osc2Pw, 0.68f }, { p::osc2Fine, -6.0f }, { p::osc2Level, 0.8f },
+            { p::cutoff, 3800.0f }, { p::ampAttack, 0.25f }, { p::ampRelease, 0.8f },
+            { p::lfoRate, 0.8f }, { p::lfoToPitch, 3.0f }, { p::character, 0.8f },
+            { p::driftAmount, 2.5f }, { p::chorusMix, 0.5f }, { p::reverbMix, 0.3f } } },
+        { "Polysix Strings", "PAD", {
+            { p::osc1Wave, 2.0f }, { p::osc1Pw, 0.35f }, { p::osc2Wave, 2.0f },
+            { p::osc2Pw, 0.65f }, { p::osc2Fine, -4.0f }, { p::osc2Level, 0.85f },
+            { p::cutoff, 3200.0f }, { p::ampAttack, 0.35f }, { p::ampRelease, 1.0f },
+            { p::chorusMix, 0.55f }, { p::reverbMix, 0.25f }, { p::lfoToPitch, 2.0f },
+            { p::lfoRate, 0.7f }, { p::character, 0.7f } } },
+        { "Super Saw Stack", "PAD", {
             { p::osc2Level, 0.9f }, { p::osc2Fine, -7.0f }, { p::unisonCount, 5.0f },
             { p::unisonDetune, 22.0f }, { p::unisonSpread, 0.9f }, { p::cutoff, 5200.0f },
             { p::ampAttack, 0.02f }, { p::ampRelease, 0.5f }, { p::character, 0.7f },
             { p::chorusMix, 0.25f }, { p::reverbMix, 0.22f }, { p::polyphony, 16.0f } } },
-        { "Whistle (Self-Osc)", {
-            { p::osc1Level, 0.0f }, { p::noiseLevel, 0.06f }, { p::cutoff, 880.0f },
-            { p::resonance, 1.0f }, { p::keyTrack, 1.0f }, { p::filterEnvAmt, 0.0f },
-            { p::ampAttack, 0.02f }, { p::ampRelease, 0.5f }, { p::quality, 2.0f },
-            { p::reverbMix, 0.35f } } },
+        { "Tape Flute", "PAD", {
+            { p::osc1Wave, 0.0f }, { p::osc1Level, 0.9f }, { p::noiseLevel, 0.05f },
+            { p::cutoff, 3000.0f }, { p::glide, 0.12f }, { p::character, 1.0f },
+            { p::driftAmount, 5.0f }, { p::driftSpeed, 0.6f }, { p::warmup, 0.6f },
+            { p::ampAttack, 0.08f }, { p::reverbMix, 0.3f }, { p::polyphony, 1.0f } } },
+
+        // ---- ARP ----
+        { "Berlin School", "ARP", {
+            { p::arpMode, 3.0f }, { p::arpRate, 6.0f }, { p::arpOctaves, 2.0f },
+            { p::arpGate, 0.55f }, { p::subLevel, 0.4f }, { p::cutoff, 1100.0f },
+            { p::resonance, 0.45f }, { p::filterEnvAmt, 0.5f }, { p::filtDecay, 0.15f },
+            { p::filtSustain, 0.2f }, { p::delayMix, 0.35f }, { p::delayTime, 0.375f },
+            { p::delayFeedback, 0.55f }, { p::character, 0.7f }, { p::ampRelease, 0.15f } } },
+        { "Disco Octaves", "ARP", {
+            { p::arpMode, 1.0f }, { p::arpRate, 9.0f }, { p::arpOctaves, 2.0f },
+            { p::arpGate, 0.4f }, { p::osc2Wave, 2.0f }, { p::osc2Semi, -12.0f },
+            { p::osc2Level, 0.6f }, { p::cutoff, 1400.0f }, { p::filterEnvAmt, 0.6f },
+            { p::filtDecay, 0.12f }, { p::filtSustain, 0.0f }, { p::ampSustain, 0.4f },
+            { p::ampRelease, 0.1f }, { p::delayMix, 0.2f } } },
+        { "Space Whistle Arp", "ARP", {
+            { p::arpMode, 4.0f }, { p::arpRate, 10.0f }, { p::arpOctaves, 3.0f },
+            { p::arpGate, 0.3f }, { p::osc1Level, 0.0f }, { p::noiseLevel, 0.06f },
+            { p::cutoff, 880.0f }, { p::resonance, 1.0f }, { p::keyTrack, 1.0f },
+            { p::filterEnvAmt, 0.0f }, { p::ampAttack, 0.01f }, { p::ampRelease, 0.3f },
+            { p::reverbMix, 0.5f }, { p::delayMix, 0.3f }, { p::quality, 2.0f } } },
+        { "Laser Zap", "ARP", {
+            { p::osc1Level, 0.0f }, { p::noiseLevel, 0.04f }, { p::cutoff, 6000.0f },
+            { p::resonance, 1.0f }, { p::keyTrack, 1.0f }, { p::filterEnvAmt, 0.9f },
+            { p::filtAttack, 0.001f }, { p::filtDecay, 0.2f }, { p::filtSustain, 0.0f },
+            { p::ampDecay, 0.25f }, { p::ampSustain, 0.0f }, { p::ampRelease, 0.2f },
+            { p::arpMode, 2.0f }, { p::arpRate, 7.0f }, { p::arpOctaves, 2.0f },
+            { p::arpGate, 0.35f }, { p::quality, 2.0f }, { p::delayMix, 0.25f } } },
     };
     return presets;
 }
@@ -330,7 +479,8 @@ SappSynthEditor::SappSynthEditor(SappSynthProcessor& proc)
     auto& osc2 = addSection("OSCILLATOR 2");
     osc2.slots = { &addChooser(p::osc2Wave, "Wave").box, &addKnob(p::osc2Octave, "Octave").slider,
                    &addKnob(p::osc2Semi, "Semi").slider, &addKnob(p::osc2Fine, "Fine").slider,
-                   &addKnob(p::osc2Pw, "Width").slider, &addKnob(p::osc2Level, "Level").slider };
+                   &addKnob(p::osc2Pw, "Width").slider, &addKnob(p::osc2Fm, "FM > 1").slider,
+                   &addKnob(p::osc2Level, "Level").slider };
     auto& subSection = addSection("SUB + NOISE");
     subSection.slots = { &addChooser(p::subOctave, "Sub Oct").box, &addChooser(p::subWave, "Sub Wave").box,
                          &addKnob(p::subLevel, "Sub").slider, &addKnob(p::noiseLevel, "Noise").slider };
@@ -361,11 +511,15 @@ SappSynthEditor::SappSynthEditor(SappSynthProcessor& proc)
     voiceSection.slots = { &addKnob(p::polyphony, "Poly").slider, &addKnob(p::unisonCount, "Unison").slider,
                            &addKnob(p::unisonDetune, "Detune").slider, &addKnob(p::unisonSpread, "Spread").slider,
                            &addKnob(p::glide, "Glide").slider };
-    auto& outSection = addSection("OUTPUT");
-    outSection.slots = { &addKnob(p::outputDrive, "Drive").slider, &addKnob(p::master, "Volume").slider,
-                         &addChooser(p::quality, "Quality").box };
+    auto& arpSection = addSection("ARPEGGIATOR");
+    arpSection.slots = { &addChooser(p::arpMode, "Mode").box, &addKnob(p::arpRate, "Rate").slider,
+                         &addKnob(p::arpOctaves, "Octaves").slider, &addKnob(p::arpGate, "Gate").slider };
 
     // Row 4 (small black knobs) + Lab
+    auto& outSection = addSection("OUTPUT");
+    outSection.slots = { &addKnob(p::outputDrive, "Drive", true).slider,
+                         &addKnob(p::master, "Volume", true).slider,
+                         &addChooser(p::quality, "Quality").box };
     auto& chorusSection = addSection("CHORUS");
     chorusSection.slots = { &addKnob(p::chorusMix, "Amount", true).slider,
                             &addKnob(p::chorusRate, "Rate", true).slider };
@@ -382,14 +536,26 @@ SappSynthEditor::SappSynthEditor(SappSynthProcessor& proc)
 
     // Header widgets
     presetBox.setTextWhenNothingSelected("PRESETS");
-    int id = 1;
-    for (const auto& preset : factoryPresets())
-        presetBox.addItem(preset.name, id++);
+    {
+        // Item IDs map to preset indices (+1); section headings carry no ID,
+        // so selection stays stable with grouped menus.
+        juce::String lastCategory;
+        int id = 1;
+        for (const auto& preset : factoryPresets())
+        {
+            if (lastCategory != preset.category)
+            {
+                lastCategory = preset.category;
+                presetBox.addSectionHeading(lastCategory);
+            }
+            presetBox.addItem(preset.name, id++);
+        }
+    }
     presetBox.onChange = [this]
     {
-        const int index = presetBox.getSelectedItemIndex();
-        if (index >= 0)
-            applyPreset(index);
+        const int id = presetBox.getSelectedId();
+        if (id > 0)
+            applyPreset(id - 1);
     };
     addAndMakeVisible(presetBox);
 
@@ -425,6 +591,13 @@ SappSynthEditor::Knob& SappSynthEditor::addKnob(const char* paramId, const juce:
     knob->slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     knob->slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     knob->slider.setPopupDisplayEnabled(true, true, nullptr);
+    // Granular control: long drag throw, cmd/ctrl-drag for ultra-fine,
+    // double-click returns to the parameter default.
+    knob->slider.setMouseDragSensitivity(320);
+    knob->slider.setVelocityModeParameters(0.6, 1, 0.06, true);
+    if (auto* parameter = processor.apvts.getParameter(paramId))
+        knob->slider.setDoubleClickReturnValue(
+            true, parameter->convertFrom0to1(parameter->getDefaultValue()));
     if (small)
         knob->slider.getProperties().set("small", true);
     knob->label.setText(text.toUpperCase(), juce::dontSendNotification);
@@ -653,7 +826,7 @@ void SappSynthEditor::resized()
     layoutRow({ 0, 1, 2, 3 }, takeRow());
     layoutRow({ 4, 5, 6, 7 }, takeRow());
     layoutRow({ 8, 9, 10 }, takeRow());
-    layoutRow({ 11, 12, 13, 14 }, takeRow());
+    layoutRow({ 11, 12, 13, 14, 15 }, takeRow());
 }
 
 } // namespace sappsynth

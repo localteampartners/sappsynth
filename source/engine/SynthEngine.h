@@ -52,6 +52,9 @@ private:
     void applyEvent(const Event& event);
     void renderSpan(float* left, float* right, int numSamples);
     void updateControl(int numSamples);
+    void processArp(int numSamples);
+    void arpAddHeld(int note, float velocity);
+    void arpRemoveHeld(int note);
 
     VoiceManager voiceManager;
     PatchState patch_ {};
@@ -73,6 +76,17 @@ private:
     TelemetryBus telemetryBus;
     std::atomic<bool> labIdeal { false };
     std::atomic<bool> labDriftFrozen { false };
+
+    // Arpeggiator state (audio-thread only, fixed capacity).
+    struct HeldNote { int note; float velocity; };
+    HeldNote arpHeld[16] {};
+    int arpHeldCount { 0 };
+    int arpStepIndex { 0 };
+    int arpDirection { 1 };
+    int arpSoundingNote { -1 };
+    double arpStepCountdown { 0.0 };
+    double arpGateCountdown { 0.0 };
+    RandomSource arpRng;
 
     double sr { 48000.0 };
     QualityMode activeQuality { QualityMode::Normal };

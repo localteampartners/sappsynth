@@ -108,7 +108,7 @@ def knob_frame(big, body, dark_pointer, angle):
     ridge_phase = (theta + angle) * 30.0
     ridges = 0.5 + 0.5 * np.cos(ridge_phase)
     # directional light on the ridged edge
-    edge_light = 0.75 + 0.45 * np.clip(np.cos(theta - LIGHT_ANGLE), -1, 1)
+    edge_light = 0.82 + 0.28 * np.clip(np.cos(theta - LIGHT_ANGLE), -1, 1)
     skirt_shade = (0.58 + 0.20 * ridges) * edge_light
     skirt_zone = smoothstep(skirt_top - aa, skirt_top + aa, r) * (1.0 - smoothstep(skirt_r - aa, skirt_r + aa, r))
     img += (body[None, None, :] * skirt_shade[:, :, None]) * skirt_zone[:, :, None]
@@ -121,26 +121,27 @@ def knob_frame(big, body, dark_pointer, angle):
 
     # --- cap side wall ---
     wall_zone = smoothstep(cap_face - aa, cap_face + aa, r) * (1.0 - smoothstep(cap_r - aa, cap_r + aa, r))
-    wall_shade = 0.55 + 0.30 * np.clip(np.cos(theta - LIGHT_ANGLE), -1, 1)
+    wall_shade = 0.66 + 0.16 * np.clip(np.cos(theta - LIGHT_ANGLE), -1, 1)
     img += (body[None, None, :] * wall_shade[:, :, None]) * wall_zone[:, :, None]
 
     # --- cap face: domed, lit off-center toward the light ---
     lx = c + 0.09 * big * np.cos(LIGHT_ANGLE)
     ly = c + 0.09 * big * np.sin(LIGHT_ANGLE)
     dome_d = np.sqrt((xx - lx) ** 2 + (yy - ly) ** 2) / cap_face
-    dome = 1.06 - 0.26 * np.clip(dome_d, 0, 1.4) ** 1.5
+    dome = 1.00 - 0.09 * np.clip(dome_d, 0, 1.4) ** 1.6
     face_zone = 1.0 - smoothstep(cap_face - aa, cap_face + aa, r)
     img += (body[None, None, :] * dome[:, :, None]) * face_zone[:, :, None]
 
     # --- specular highlight on the cap ---
-    spec = np.exp(-(((xx - lx) ** 2 + (yy - ly) ** 2) / (0.005 * big * big)))
-    img += 42.0 * spec[:, :, None] * face_zone[:, :, None]
+    # matte: only a whisper of sheen, no hot spot
+    spec = np.exp(-(((xx - lx) ** 2 + (yy - ly) ** 2) / (0.02 * big * big)))
+    img += 9.0 * spec[:, :, None] * face_zone[:, :, None]
 
     # --- pointer line (rotates), on cap + skirt top ---
     pa = angle - np.pi / 2.0  # 0 = up
     ang_diff = np.arctan2(np.sin(theta - pa), np.cos(theta - pa))
-    line_halfwidth = 0.055
-    in_line = (np.abs(ang_diff) < line_halfwidth) & (r > 0.06 * big) & (r < skirt_top * 0.96)
+    line_halfwidth = 0.085
+    in_line = (np.abs(ang_diff) < line_halfwidth) & (r > 0.05 * big) & (r < skirt_r * 0.97)
     line_soft = np.clip(1.0 - np.abs(ang_diff) / line_halfwidth, 0, 1) * in_line
     pointer_col = np.array(dark_pointer, dtype=np.float64)
     img = img * (1 - 0.92 * line_soft[:, :, None]) + pointer_col[None, None, :] * 0.92 * line_soft[:, :, None]

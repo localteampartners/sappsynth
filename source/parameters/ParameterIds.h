@@ -18,6 +18,7 @@ inline constexpr const char* osc2Semi      = "osc2.pitch.semitones";
 inline constexpr const char* osc2Fine      = "osc2.pitch.cents";
 inline constexpr const char* osc2Pw        = "osc2.pulseWidth";
 inline constexpr const char* osc2Level     = "mixer.osc2.level";
+inline constexpr const char* osc2Fm        = "osc2.fmToOsc1";
 
 inline constexpr const char* subOctave     = "sub.octave";
 inline constexpr const char* subWave       = "sub.wave";
@@ -54,6 +55,11 @@ inline constexpr const char* unisonCount   = "voice.unison.count";
 inline constexpr const char* unisonDetune  = "voice.unison.detune.cents";
 inline constexpr const char* unisonSpread  = "voice.unison.spread";
 inline constexpr const char* glide         = "voice.glide.s";
+
+inline constexpr const char* arpMode       = "arp.mode";
+inline constexpr const char* arpRate       = "arp.rate.hz";
+inline constexpr const char* arpOctaves    = "arp.octaves";
+inline constexpr const char* arpGate       = "arp.gate";
 
 inline constexpr const char* chorusMix     = "fx.chorus.mix";
 inline constexpr const char* chorusRate    = "fx.chorus.rate.hz";

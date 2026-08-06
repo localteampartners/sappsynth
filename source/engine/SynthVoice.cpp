@@ -198,8 +198,10 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
         const float totalOct = staticOct + patch.filterEnvAmount * 5.0f * fEnv;
         cutoffBuf[static_cast<std::size_t>(i)] = patch.cutoffHz * std::exp2(totalOct);
 
-        const float o1 = osc1.tick(pwm);
+        // Osc2 renders first so it can frequency-modulate osc1 this sample.
         const float o2 = osc2.tick(pwm2);
+        const float fmMult = 1.0f + patch.osc2ToOsc1Fm * 4.0f * o2;
+        const float o1 = osc1.tick(pwm, fmMult);
         const float sb = sub.tick(0.5f);
         const float nz = noiseRng.nextSigned();
         signalBuf[static_cast<std::size_t>(i)] = mixer.weightedSum(o1, o2, sb, nz);
