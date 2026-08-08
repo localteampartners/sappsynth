@@ -2,7 +2,7 @@
 
 <!-- UPDATE WHEN: a feature ships, a deploy happens, something breaks, or something gets fixed. This file answers "what's the project like *right now*?" -->
 
-**Last verified:** 2026-08-06 (SappLink CC-in verified)
+**Last verified:** 2026-08-08 (preset round-trip + auval verified)
 
 ---
 
@@ -23,8 +23,14 @@
   silence, so they're click-free.
 - **Plugin** (JUCE 8.0.15): Standalone + VST3 + AU. **Vintage hardware UI**:
   generated walnut cheeks, crinkle panel, photoreal 101-frame filmstrip knobs
-  (ivory + black bakelite), engraved sections, pilot lamp, 8 factory presets,
+  (ivory + black bakelite), engraved sections, pilot lamp, 186 factory presets,
   NEW UNIT reroll. **auval passes.**
+- **Presets, both halves**: 186 factory presets selected by MIDI program change
+  or the host program API, plus USER presets saved from the SAVE button to
+  `~/Documents/SappSounds/presets/sappsynth/` in the shared SappLink format
+  (`sapptune/sapplink/PRESETS.md`) and loaded by name. A `preset`
+  AudioParameterChoice exposes both to host automation and to a Claude session
+  over SappLink. `SappUiShot --presettest` proves the round trip is exact.
 - **Lab view**: phosphor scope + log spectrum from a lock-free telemetry tap,
   IDEAL/MODELED A/B, FREEZE DRIFT.
 - **SappLink CC-in**: 20 MIDI CCs drive parameters per the sapptune manifest

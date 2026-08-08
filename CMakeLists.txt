@@ -115,6 +115,7 @@ if(SAPPSYNTH_BUILD_PLUGIN)
     source/plugin/PluginProcessor.cpp
     source/plugin/PluginEditor.cpp
     source/plugin/FactoryPresets.cpp
+    source/plugin/UserPresets.cpp
     source/plugin/SappLinkCCMap.cpp
   )
   target_link_libraries(SappSynthPlugin PRIVATE
@@ -141,6 +142,7 @@ if(SAPPSYNTH_BUILD_PLUGIN)
       source/plugin/PluginProcessor.cpp
       source/plugin/PluginEditor.cpp
       source/plugin/FactoryPresets.cpp
+      source/plugin/UserPresets.cpp
       source/plugin/SappLinkCCMap.cpp
     )
     target_include_directories(SappUiShot PRIVATE source/plugin)

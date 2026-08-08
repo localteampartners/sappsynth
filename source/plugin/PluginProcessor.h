@@ -5,6 +5,7 @@
 #include <atomic>
 #include <vector>
 #include "../engine/SynthEngine.h"
+#include "UserPresets.h"
 
 namespace sappsynth {
 
@@ -12,10 +13,16 @@ namespace sappsynth {
 // parameters, MidiBuffer, state blobs — into engine concepts. No sound-design
 // logic lives here.
 class SappSynthProcessor : public juce::AudioProcessor,
+                           private juce::AudioProcessorValueTreeState::Listener,
                            private juce::Timer
 {
 public:
+    // The SappLink instrument name: names the user-preset folder and must
+    // match sapplink/manifests/sappsynth.json.
+    static constexpr const char* kInstrument = "sappsynth";
+
     SappSynthProcessor();
+    ~SappSynthProcessor() override;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
@@ -43,6 +50,29 @@ public:
     // Apply factory preset N now. Message thread only (resets every
     // parameter to its default, then applies the preset's values).
     void applyFactoryPreset(int index);
+
+    // ---------------------------------------------------------- user presets --
+    // Saved sounds, shared format across the suite (sapplink/PRESETS.md).
+    // Factory presets stay addressed by program index; user presets are
+    // addressed by NAME, so the two can never collide.
+
+    // Capture the current parameter state to
+    // <Documents>/SappSounds/presets/sappsynth/<name>.json. Message thread.
+    bool saveUserPreset(const juce::String& name, const juce::String& notes, juce::String& error);
+
+    // Load a user preset by name (case-insensitive). Message thread.
+    bool loadUserPreset(const juce::String& name, juce::String& error);
+
+    // Fresh scan of the user preset folder.
+    std::vector<sapp::userpresets::UserPreset> userPresets() const;
+
+    // Choice-list geometry of the `preset` parameter: [0, factoryPresetCount)
+    // are factory programs, the rest are the user presets discovered when this
+    // instance was constructed.
+    int factoryPresetCount() const;
+
+    // Apply choice N of the `preset` parameter. Message thread.
+    void applyPresetChoice(int index);
 
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
@@ -87,6 +117,16 @@ private:
     void timerCallback() override;
     std::atomic<int> pendingProgram { -1 };
     std::atomic<int> currentProgram { 0 };
+
+    // The `preset` parameter can be moved from the audio thread (host
+    // automation), so its listener only stores an index — the same timer that
+    // already defers program changes does the loading.
+    void parameterChanged(const juce::String& parameterId, float newValue) override;
+    std::atomic<int> pendingPresetChoice { -1 };
+    // Set while WE are moving the `preset` parameter, so syncing it after a
+    // program change never re-enters the load.
+    bool applyingPreset { false };
+    void syncPresetParameter(int choiceIndex);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SappSynthProcessor)
 };

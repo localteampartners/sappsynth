@@ -8,6 +8,30 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ## 2026-08-08
 
+- **User presets** — save the sound you have and get it back. The SAVE button
+  next to PRESETS captures the current parameter state to
+  `~/Documents/SappSounds/presets/sappsynth/<name>.json` in the shared SappLink
+  format (`sapptune/sapplink/PRESETS.md`); the preset browser lists them under
+  a USER category alongside the factory bank and loads them by name. Values are
+  stored NORMALISED, which is the only encoding that round-trips exactly
+  through the skewed parameter ranges — verified bit-for-bit across 65
+  parameters by `SappUiShot --presettest`.
+- **`preset` parameter (host-automatable sound selection)** — a new
+  AudioParameterChoice listing the 186 factory presets followed by the user
+  presets found at construction. Sound selection can now live in a host
+  automation lane and be driven over SappLink, which MIDI program change alone
+  could not do (sapptune issue #13). Added LAST in the layout, so no existing
+  parameter index moved; selection is applied on the message thread through the
+  timer that already defers program changes. auval reports 66 global parameters
+  and still passes.
+- The SappLink manifest (`sapptune/sapplink/manifests/sappsynth.json`) listed
+  only the first 73 factory presets while the plugin had 186 — a Claude session
+  could not name the other 113. Extended to the full bank (append-only; program
+  numbers 0-72 are untouched) and given the `preset` parameter under a new
+  `hostParameters` key.
+
+## 2026-08-08
+
 - **113 new factory presets** (bank goes 73 -> 186) covering the classic
   ground: LADDER (ladder-filter monos — leads, brass, growl basses, pedal),
   POLY (Jupiter/Prophet/Juno-style strings, brass, PWM, string machine),

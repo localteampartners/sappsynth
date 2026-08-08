@@ -369,6 +369,30 @@ PresetBrowser::PresetBrowser()
     list.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff15161a));
     list.setRowHeight(24);
     addAndMakeVisible(list);
+    refreshUserPresets();
+}
+
+int PresetBrowser::factoryCount() const
+{
+    return static_cast<int>(presets::all().size());
+}
+
+juce::String PresetBrowser::userNameAt(int index) const
+{
+    return index >= 0 && index < static_cast<int>(entries.size())
+               ? entries[static_cast<std::size_t>(index)].name
+               : juce::String();
+}
+
+void PresetBrowser::refreshUserPresets()
+{
+    entries.clear();
+    for (const auto& preset : presets::all())
+        entries.push_back({ preset.name, preset.category });
+    // User presets live on disk (sapplink/PRESETS.md) — rescanned on every
+    // open so a sound saved a moment ago is immediately loadable.
+    for (const auto& preset : sapp::userpresets::scan(SappSynthProcessor::kInstrument))
+        entries.push_back({ preset.name, "USER" });
     refilter();
 }
 
@@ -376,13 +400,12 @@ void PresetBrowser::refilter()
 {
     filtered.clear();
     const auto query = searchBox.getText().trim().toLowerCase();
-    const auto& bank = presets::all();
-    for (int i = 0; i < static_cast<int>(bank.size()); ++i)
+    for (int i = 0; i < static_cast<int>(entries.size()); ++i)
     {
-        const auto& preset = bank[static_cast<std::size_t>(i)];
+        const auto& entry = entries[static_cast<std::size_t>(i)];
         if (query.isEmpty()
-            || juce::String(preset.name).toLowerCase().contains(query)
-            || juce::String(preset.category).toLowerCase().contains(query))
+            || entry.name.toLowerCase().contains(query)
+            || entry.category.toLowerCase().contains(query))
             filtered.push_back(i);
     }
     list.updateContent();
@@ -393,17 +416,18 @@ void PresetBrowser::paintListBoxItem(int row, juce::Graphics& g, int w, int h, b
 {
     if (row < 0 || row >= static_cast<int>(filtered.size()))
         return;
-    const auto& preset = presets::all()[static_cast<std::size_t>(filtered[static_cast<std::size_t>(row)])];
+    const auto& entry = entries[static_cast<std::size_t>(filtered[static_cast<std::size_t>(row)])];
     if (selected)
         g.fillAll(juce::Colour(0xff5c4718).withAlpha(0.5f));
     else if (row % 2 == 1)
         g.fillAll(juce::Colours::white.withAlpha(0.02f));
     g.setColour(colours::cream);
     g.setFont(vintageFont(12.5f));
-    g.drawText(preset.name, 10, 0, w - 90, h, juce::Justification::centredLeft);
-    g.setColour(colours::amber.withAlpha(0.75f));
+    g.drawText(entry.name, 10, 0, w - 90, h, juce::Justification::centredLeft);
+    g.setColour(entry.category == "USER" ? colours::cream.withAlpha(0.55f)
+                                         : colours::amber.withAlpha(0.75f));
     g.setFont(vintageFont(9.5f, true));
-    g.drawText(preset.category, w - 82, 0, 74, h, juce::Justification::centredRight);
+    g.drawText(entry.category, w - 82, 0, 74, h, juce::Justification::centredRight);
 }
 
 void PresetBrowser::listBoxItemClicked(int row, const juce::MouseEvent&)
@@ -417,7 +441,7 @@ void PresetBrowser::visibilityChanged()
     if (isVisible())
     {
         searchBox.setText({}, juce::dontSendNotification);
-        refilter();
+        refreshUserPresets();
         searchBox.grabKeyboardFocus();
     }
 }
@@ -523,11 +547,19 @@ SappSynthEditor::SappSynthEditor(SappSynthProcessor& proc)
     presetBrowser.onPresetChosen = [this](int index)
     {
         applyPreset(index);
-        presetButton.setButtonText(presets::all()[static_cast<std::size_t>(index)].name);
+        presetButton.setButtonText(index < presetBrowser.factoryCount()
+                                       ? juce::String(presets::all()[static_cast<std::size_t>(index)].name)
+                                       : presetBrowser.userNameAt(index));
         presetBrowser.setVisible(false);
     };
     addChildComponent(presetBrowser);
     presetBrowser.setAlwaysOnTop(true);
+
+    savePresetButton.setTooltip("Save the current sound as a user preset in "
+                                + sapp::userpresets::presetDir(SappSynthProcessor::kInstrument)
+                                      .getFullPathName());
+    savePresetButton.onClick = [this] { promptSaveUserPreset(); };
+    addAndMakeVisible(savePresetButton);
 
     newUnitButton.onClick = [this]
     {
@@ -619,8 +651,56 @@ SappSynthEditor::Section& SappSynthEditor::addSection(const juce::String& title)
 void SappSynthEditor::applyPreset(int index)
 {
     // Single apply path shared with host program changes and MIDI program
-    // change (the processor keeps getCurrentProgram in sync).
-    processor.applyFactoryPreset(index);
+    // change (the processor keeps getCurrentProgram in sync). Past the factory
+    // bank the entry is a user preset, addressed by name.
+    if (index < presetBrowser.factoryCount())
+    {
+        processor.applyFactoryPreset(index);
+        return;
+    }
+    juce::String error;
+    if (!processor.loadUserPreset(presetBrowser.userNameAt(index), error))
+        juce::NativeMessageBox::showAsync(
+            juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::WarningIcon)
+                .withTitle("SappSynth").withMessage(error).withButton("OK"),
+            nullptr);
+}
+
+void SappSynthEditor::promptSaveUserPreset()
+{
+    // Async throughout: a plugin editor must never spin a modal loop.
+    saveWindow = std::make_unique<juce::AlertWindow>(
+        "SAVE PRESET",
+        "Saved to " + sapp::userpresets::presetDir(SappSynthProcessor::kInstrument).getFullPathName(),
+        juce::MessageBoxIconType::NoIcon);
+    saveWindow->addTextEditor("name", presetButton.getButtonText(), "Name");
+    saveWindow->addButton("SAVE", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    saveWindow->addButton("CANCEL", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    saveWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int result)
+    {
+        if (saveWindow == nullptr)
+            return;
+        const auto name = saveWindow->getTextEditorContents("name").trim();
+        saveWindow.reset();
+        if (result != 1 || name.isEmpty())
+            return;
+
+        juce::String error;
+        const bool ok = processor.saveUserPreset(name, {}, error);
+        if (ok)
+        {
+            presetButton.setButtonText(name);
+            presetBrowser.refreshUserPresets();
+        }
+        juce::NativeMessageBox::showAsync(
+            juce::MessageBoxOptions()
+                .withIconType(ok ? juce::MessageBoxIconType::InfoIcon
+                                 : juce::MessageBoxIconType::WarningIcon)
+                .withTitle("SappSynth")
+                .withMessage(ok ? "Saved user preset \"" + name + "\"." : error)
+                .withButton("OK"),
+            nullptr);
+    }), true);
 }
 
 void SappSynthEditor::refreshSeedLabel()
@@ -785,7 +865,9 @@ void SappSynthEditor::resized()
     header.removeFromRight(4);
     newUnitButton.setBounds(header.removeFromRight(88).reduced(0, 9));
     header.removeFromRight(8);
-    presetButton.setBounds(header.removeFromRight(200).reduced(0, 9));
+    savePresetButton.setBounds(header.removeFromRight(62).reduced(0, 9));
+    header.removeFromRight(4);
+    presetButton.setBounds(header.removeFromRight(180).reduced(0, 9));
 
     presetBrowser.setBounds(getLocalBounds().withSizeKeepingCentre(460, 480));
     keyboard.setBounds(area.removeFromBottom(76));

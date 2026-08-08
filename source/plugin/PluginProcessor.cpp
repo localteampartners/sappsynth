@@ -35,7 +35,16 @@ SappSynthProcessor::SappSynthProcessor()
     for (std::size_t i = 0; i < table.size(); ++i)
         ccSlews[i].parameter = apvts.getParameter(table[i].paramId);
 
+    // Host-automatable sound selection (sapptune issue #13). The callback can
+    // arrive on the audio thread; it only stores an index.
+    apvts.addParameterListener(sapp::userpresets::kPresetParamId, this);
+
     startTimerHz(30);   // deferred program-change apply (message thread)
+}
+
+SappSynthProcessor::~SappSynthProcessor()
+{
+    apvts.removeParameterListener(sapp::userpresets::kPresetParamId, this);
 }
 
 // ------------------------------------------------------- factory programs --
@@ -72,14 +81,91 @@ void SappSynthProcessor::applyFactoryPreset(int index)
 
     for (auto* parameter : getParameters())
         if (auto* withId = dynamic_cast<juce::RangedAudioParameter*>(parameter))
-            withId->setValueNotifyingHost(withId->getDefaultValue());
+            // `preset` is the chooser, not part of the sound: resetting it
+            // here would snap the selection back to program 0 on every load.
+            if (withId->paramID != sapp::userpresets::kPresetParamId)
+                withId->setValueNotifyingHost(withId->getDefaultValue());
 
     for (const auto& [id, value] : bank[static_cast<std::size_t>(index)].values)
         if (auto* parameter = apvts.getParameter(id))
             parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
 
     currentProgram.store(index);
+    syncPresetParameter(index);
     updateHostDisplay(ChangeDetails {}.withProgramChanged(true));
+}
+
+// ---------------------------------------------------------- user presets --
+
+int SappSynthProcessor::factoryPresetCount() const
+{
+    return static_cast<int>(presets::all().size());
+}
+
+std::vector<sapp::userpresets::UserPreset> SappSynthProcessor::userPresets() const
+{
+    return sapp::userpresets::scan(kInstrument);
+}
+
+bool SappSynthProcessor::saveUserPreset(const juce::String& name, const juce::String& notes,
+                                        juce::String& error)
+{
+    auto preset = sapp::userpresets::capture(*this, name.trim(), notes);
+    juce::File written;
+    return sapp::userpresets::save(preset, kInstrument, written, error);
+}
+
+bool SappSynthProcessor::loadUserPreset(const juce::String& name, juce::String& error)
+{
+    const auto preset = sapp::userpresets::findByName(kInstrument, name);
+    if (!preset.has_value())
+    {
+        error = "no user preset named \"" + name + "\" in "
+                + sapp::userpresets::presetDir(kInstrument).getFullPathName();
+        return false;
+    }
+    sapp::userpresets::apply(*preset, apvts);
+    return true;
+}
+
+void SappSynthProcessor::applyPresetChoice(int index)
+{
+    if (index < 0)
+        return;
+    if (index < factoryPresetCount())
+    {
+        applyFactoryPreset(index);
+        return;
+    }
+    // Beyond the factory bank: resolve the choice label back to a name and
+    // load from disk, so the file is the source of truth even if it changed
+    // since this instance was constructed.
+    auto* choice = dynamic_cast<juce::AudioParameterChoice*>(
+        apvts.getParameter(sapp::userpresets::kPresetParamId));
+    if (choice == nullptr || index >= choice->choices.size())
+        return;
+    juce::String error;
+    loadUserPreset(sapp::userpresets::nameFromChoiceLabel(choice->choices[index]), error);
+    syncPresetParameter(index);
+}
+
+void SappSynthProcessor::syncPresetParameter(int choiceIndex)
+{
+    auto* choice = dynamic_cast<juce::AudioParameterChoice*>(
+        apvts.getParameter(sapp::userpresets::kPresetParamId));
+    if (choice == nullptr || choiceIndex < 0 || choiceIndex >= choice->choices.size())
+        return;
+    if (choice->getIndex() == choiceIndex)
+        return;
+    const juce::ScopedValueSetter<bool> guard(applyingPreset, true);
+    choice->setValueNotifyingHost(choice->convertTo0to1(static_cast<float>(choiceIndex)));
+}
+
+void SappSynthProcessor::parameterChanged(const juce::String& parameterId, float newValue)
+{
+    if (applyingPreset || parameterId != sapp::userpresets::kPresetParamId)
+        return;
+    pendingPresetChoice.store(static_cast<int>(newValue));
 }
 
 void SappSynthProcessor::timerCallback()
@@ -87,6 +173,10 @@ void SappSynthProcessor::timerCallback()
     const int program = pendingProgram.exchange(-1);
     if (program >= 0)
         applyFactoryPreset(program);
+
+    const int choice = pendingPresetChoice.exchange(-1);
+    if (choice >= 0)
+        applyPresetChoice(choice);
 }
 
 void SappSynthProcessor::handleSappLinkCc(int ccNumber, int ccValue)
@@ -231,6 +321,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
                                    juce::NormalisableRange<float>(-40.0f, 6.0f, 0.1f), -6.0f));
     layout.add(std::make_unique<Pc>(ID{p::quality, 1}, "Quality",
                                     juce::StringArray { "Eco", "Normal", "High" }, 1));
+
+    // Host-automatable sound selection (sapptune issue #13). ADDED LAST so no
+    // existing parameter's index moves — automation lanes are a contract.
+    // The factory bank in program order, then the user presets that exist
+    // right now; the list is fixed for this instance's lifetime because a
+    // choice parameter cannot change its choices without breaking lanes.
+    juce::StringArray presetChoices;
+    for (const auto& preset : presets::all())
+        presetChoices.add(preset.name);
+    presetChoices.addArray(sapp::userpresets::choiceLabels(SappSynthProcessor::kInstrument));
+    layout.add(std::make_unique<Pc>(ID{sapp::userpresets::kPresetParamId, 1}, "Preset",
+                                    presetChoices, 0));
 
     return layout;
 }

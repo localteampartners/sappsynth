@@ -57,12 +57,23 @@ private:
 };
 
 // Searchable, scrollable preset browser overlay: type to filter across name
-// and category, click to load. Replaces the old ComboBox menu.
+// and category, click to load. Lists the factory bank first, then the user
+// presets found in <Documents>/SappSounds/presets/sappsynth (category "USER").
 class PresetBrowser : public juce::Component, private juce::ListBoxModel
 {
 public:
     PresetBrowser();
-    std::function<void(int)> onPresetChosen; // index into presets::all()
+
+    // index < factory count -> presets::all()[index]; beyond that it is a
+    // user preset and userNameAt(index) is the name to load.
+    std::function<void(int)> onPresetChosen;
+
+    // Re-read the user preset folder. Cheap; called every time the browser
+    // opens so a preset saved this session shows up straight away.
+    void refreshUserPresets();
+    int factoryCount() const;
+    juce::String userNameAt(int index) const;
+
     void resized() override;
     void paint(juce::Graphics&) override;
     void visibilityChanged() override;
@@ -73,9 +84,11 @@ private:
     void listBoxItemClicked(int row, const juce::MouseEvent&) override;
     void refilter();
 
+    struct Entry { juce::String name, category; };
+    std::vector<Entry> entries;   // factory bank, then user presets
     juce::TextEditor searchBox;
     juce::ListBox list { "presets", this };
-    std::vector<int> filtered;
+    std::vector<int> filtered;    // indices into entries
 };
 
 class SappSynthEditor : public juce::AudioProcessorEditor
@@ -114,6 +127,7 @@ private:
     Section& addSection(const juce::String& title);
 
     void applyPreset(int index);
+    void promptSaveUserPreset();
     void refreshSeedLabel();
     void layoutRow(const std::vector<int>& sectionIndices, juce::Rectangle<int> rowArea);
 
@@ -125,7 +139,9 @@ private:
     std::vector<Section> sections;
 
     juce::TextButton presetButton { "PRESETS" };
+    juce::TextButton savePresetButton { "SAVE" };
     PresetBrowser presetBrowser;
+    std::unique_ptr<juce::AlertWindow> saveWindow;
     juce::TextButton newUnitButton { "NEW UNIT" };
     juce::TextButton lockButton { "LOCK" };
     juce::Label seedLabel;
