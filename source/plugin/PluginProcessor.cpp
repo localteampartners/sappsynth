@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "../parameters/ParameterIds.h"
+#include "FactoryPresets.h"
 #include "SappLinkCCMap.h"
 
 namespace sappsynth {
@@ -33,6 +34,59 @@ SappSynthProcessor::SappSynthProcessor()
     const auto& table = sapplink::mappings();
     for (std::size_t i = 0; i < table.size(); ++i)
         ccSlews[i].parameter = apvts.getParameter(table[i].paramId);
+
+    startTimerHz(30);   // deferred program-change apply (message thread)
+}
+
+// ------------------------------------------------------- factory programs --
+
+int SappSynthProcessor::getNumPrograms()
+{
+    return static_cast<int>(presets::all().size());
+}
+
+const juce::String SappSynthProcessor::getProgramName(int index)
+{
+    const auto& bank = presets::all();
+    if (index < 0 || index >= static_cast<int>(bank.size()))
+        return {};
+    return bank[static_cast<std::size_t>(index)].name;
+}
+
+void SappSynthProcessor::setCurrentProgram(int index)
+{
+    // Hosts may call this from any thread; defer to the timer like a MIDI
+    // program change. currentProgram updates immediately so hosts that read
+    // it straight back see the new value.
+    if (index < 0 || index >= getNumPrograms() || index == currentProgram.load())
+        return;
+    currentProgram.store(index);
+    pendingProgram.store(index);
+}
+
+void SappSynthProcessor::applyFactoryPreset(int index)
+{
+    const auto& bank = presets::all();
+    if (index < 0 || index >= static_cast<int>(bank.size()))
+        return;
+
+    for (auto* parameter : getParameters())
+        if (auto* withId = dynamic_cast<juce::RangedAudioParameter*>(parameter))
+            withId->setValueNotifyingHost(withId->getDefaultValue());
+
+    for (const auto& [id, value] : bank[static_cast<std::size_t>(index)].values)
+        if (auto* parameter = apvts.getParameter(id))
+            parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
+
+    currentProgram.store(index);
+    updateHostDisplay(ChangeDetails {}.withProgramChanged(true));
+}
+
+void SappSynthProcessor::timerCallback()
+{
+    const int program = pendingProgram.exchange(-1);
+    if (program >= 0)
+        applyFactoryPreset(program);
 }
 
 void SappSynthProcessor::handleSappLinkCc(int ccNumber, int ccValue)
@@ -309,6 +363,12 @@ void SappSynthProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
             // SappLink CC-in (any channel). CC 1/64 and pitch bend fall
             // through untouched — they are not part of the mapping.
             handleSappLinkCc(message.getControllerNumber(), message.getControllerValue());
+            continue;
+        }
+        else if (message.isProgramChange())
+        {
+            // Factory-preset select; applied on the message thread (timer).
+            pendingProgram.store(message.getProgramChangeNumber());
             continue;
         }
         else

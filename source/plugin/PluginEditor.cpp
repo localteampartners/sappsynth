@@ -618,17 +618,9 @@ SappSynthEditor::Section& SappSynthEditor::addSection(const juce::String& title)
 
 void SappSynthEditor::applyPreset(int index)
 {
-    const auto& bank = presets::all();
-    if (index < 0 || index >= static_cast<int>(bank.size()))
-        return;
-
-    for (auto* parameter : processor.getParameters())
-        if (auto* withId = dynamic_cast<juce::RangedAudioParameter*>(parameter))
-            withId->setValueNotifyingHost(withId->getDefaultValue());
-
-    for (const auto& [id, value] : bank[static_cast<std::size_t>(index)].values)
-        if (auto* parameter = processor.apvts.getParameter(id))
-            parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
+    // Single apply path shared with host program changes and MIDI program
+    // change (the processor keeps getCurrentProgram in sync).
+    processor.applyFactoryPreset(index);
 }
 
 void SappSynthEditor::refreshSeedLabel()
