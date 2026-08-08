@@ -38,7 +38,7 @@ jobs:
         run: cmake --build build --config Release -j 4
 
       - name: pluginval (VST3, strictness 5)
-        shell: pwsh
+        shell: powershell
         run: |
           curl.exe -LsSo pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip
           Expand-Archive pluginval.zip -DestinationPath pluginval
