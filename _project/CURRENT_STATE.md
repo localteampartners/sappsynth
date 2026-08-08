@@ -60,3 +60,11 @@
   envelopes from current level instead); kept for a future two-step steal.
 - MPE, mod matrix beyond the fixed routes, tempo-synced LFO/delay, stage
   solo/bypass and the experiment runner — deferred, see TODO.md.
+
+## 2026-08-08 — preset library
+
+- 186 factory presets in 19 categories (source/plugin/FactoryPresets.cpp),
+  all reachable by MIDI program change. Append new presets at the END:
+  program numbers are the bank index and hosts save them in projects.
+- `python3 scripts/check_presets.py` validates the bank against the live
+  parameter ranges; it runs as part of `./verify.sh`.

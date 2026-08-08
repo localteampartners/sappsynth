@@ -13,6 +13,9 @@ cmake -B build-core -DSAPPSYNTH_BUILD_PLUGIN=OFF -DCMAKE_BUILD_TYPE=Release >/de
 echo "▶ build (strict warnings act as the lint pass)"
 cmake --build build-core -j"$(sysctl -n hw.ncpu 2>/dev/null || nproc)"
 
+echo "▶ preset bank (ranges, duplicates, unknown params)"
+python3 scripts/check_presets.py
+
 echo "▶ tests"
 ./build-core/sappsynth_tests
 

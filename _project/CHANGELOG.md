@@ -6,6 +6,24 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-08-08
+
+- **113 new factory presets** (bank goes 73 -> 186) covering the classic
+  ground: LADDER (ladder-filter monos — leads, brass, growl basses, pedal),
+  POLY (Jupiter/Prophet/Juno-style strings, brass, PWM, string machine),
+  FM extended to 18 (DX-style tines, bells, marimba, clav, slap bass),
+  TRANCE, DANCE (hypersaw anthems, rave plucks, gates, big-room stabs),
+  HOUSE, TECHNO, SYNTHWAVE, CINEMA, SFX, plus more BASS/LEAD/KEYS/PAD/
+  AMBIENT staples. New presets are APPENDED, so existing MIDI program
+  numbers are unchanged.
+- New `scripts/check_presets.py`, wired into `verify.sh`: parses the real
+  parameter ranges out of PluginProcessor.cpp and validates every preset —
+  out-of-range values, duplicate names, duplicated params, and presets
+  whose sound sources are all silent.
+- Fixed by that check: "Gamelan Steps" asked for +17 semitones on osc 2
+  (parameter stops at +12, so the interval was silently clamped) — now
+  expressed as +1 octave +5 semitones, which is what it meant.
+
 ## Unreleased
 
 <!-- Working list of changes not yet deployed. Move to a dated section on deploy. -->
