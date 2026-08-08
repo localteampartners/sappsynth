@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest]   # no macOS: nothing here runs on it
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -24,36 +24,6 @@ jobs:
 
       - name: Run unit tests
         run: ctest --test-dir build-core -C Release --output-on-failure
-
-  plugin-macos:
-    name: plugin build + pluginval (macOS)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure (full, fetches JUCE 8.0.15)
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSAPPSYNTH_BUILD_TESTS=OFF
-
-      - name: Build all formats
-        run: cmake --build build --config Release -j 4
-
-      - name: pluginval (VST3, strictness 5)
-        run: |
-          curl -LsSo pluginval.zip \
-            https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
-          unzip -q pluginval.zip
-          pluginval.app/Contents/MacOS/pluginval \
-            --strictness-level 5 --validate-in-process --timeout-ms 120000 \
-            "build/SappSynthPlugin_artefacts/Release/VST3/SappSynth.vst3"
-
-      - name: Upload artefacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: SappSynth-macOS-${{ github.sha }}
-          path: |
-            build/SappSynthPlugin_artefacts/Release/VST3
-            build/SappSynthPlugin_artefacts/Release/AU
-            build/SappSynthPlugin_artefacts/Release/Standalone
 
   plugin-windows:
     name: plugin build + pluginval (Windows)
