@@ -27,34 +27,72 @@ Write decisions where someone smart would reasonably pick differently.
 
 ## Entries
 
-## 2026-08-10 — Level the bank at full polyphony; leave the gain staging alone
+## 2026-08-10 — Bracket the nonlinear stages with headroom instead of turning the whole engine down
 
-**Decision:** answer issue #1 by calibrating the factory bank against an
-eight-note chord and a swept voice-card allocation, and by fixing `Mix Drive`'s
-range. Do NOT change the voice-sum gain staging, the output drive stage, or the
-effects.
-**Context:** the issue reported chords leaving the plugin at +15 dBFS. That was
-measured before the 2026-08-09 bank levelling, which had already brought it
-down — the four named presets sit at -2 to -6 dBFS now. What actually survived
-was narrower: the bank was calibrated on a four-note chord while voices sum with
-no headroom scaling, so eight notes put 10 presets over the ship ceiling and one
-at full scale, and the audit inherited an arbitrary allocator cursor worth up to
-3.5 dB.
-**Alternatives considered:** re-staging the whole output path — a headroom
-constant on the voice bus, a soft-knee ceiling before Master, normalising the
-reverb's wet path and turning the effect Mix controls into real crossfades.
-Measured and prototyped: the reverb wet path really is 10-30 dB hot and Size
-really is a 10 dB loudness control, and a chord's peak flattens between 6 and 12
-notes because the engine soft-clips internally to hold it. But that rework
-changes the sound of every preset and every saved session, and the guarantee the
-issue asked for can be made true without it.
-**Tradeoffs:** the guarantee is a calibration, not a structural property — a
-preset that is edited hot can still be pushed over, and the engine still
-compresses itself at high note counts. The audit is now ~7 minutes instead of
-~3 because the chord pass runs four times.
-**Revisit if:** users report grain or pumping on dense chords, or the reverb's
-level-follows-Size behaviour becomes a complaint in its own right. Both are
-measured and written up in issue #1's closing comment.
+**Decision:** fix issue #2's polyphony flattening by scaling the summed voice
+bus down 20 dB (`SynthEngine::kBusHeadroom`) into the drive/FX/ceiling section
+and taking the makeup back **after** the Master fader (`kBusMakeup`). The
+nonlinear stages get 20 dB of headroom; the end-to-end gain structure does not
+move.
+**Context:** voices sum with a single-note peak near -2 dBFS, so a chord ran
+straight into the output drive's `tanh()` and stopped growing at six notes.
+The obvious fix — lower the per-voice level and let the bank's Master trims
+make it up — does not fit: `master` is -60..+6 dB and hosts have saved
+normalised values against that range, so widening it would silently re-gain
+every existing session, and leaving it alone would push ~half the bank through
+the +6 clamp. Bracketing solves both: the saturator sees a quiet bus, the
+fader sees the level it always saw. With it, the re-level converged in a
+single audit pass and only 2 of 186 presets hit the clamp (by 1.8 and 0.7 dB).
+**Alternatives considered:** widening the Master range (breaks saved
+automation); lowering `SynthVoice::kVoiceMakeup` (same clamp problem, and it
+would also change per-voice character, which was not at fault); a limiter after
+Master (re-introduces exactly the flattening being removed, since the level is
+genuinely hot before the fader).
+**Tradeoffs:** the plugin no longer bounds its own output — a user who cranks
+Master past a levelled patch will leave full scale, where the old engine would
+have soft-clipped. That is a fader doing its job, but it is a behaviour change.
+`Out Drive` also needs more of its range before it audibly saturates, because
+it is now an honest gain into a knee that starts 20 dB up.
+**Revisit if:** the drive control feels dead in its lower half, or hosts show
+users clipping they used to be protected from.
+
+## 2026-08-10 — Effect Mix is a LINEAR crossfade, not equal-power
+
+**Decision:** all three effects use `out = (1-m)·dry + m·wet`.
+**Context:** issue #2's requirement is that raising Mix cannot raise the level.
+Equal-power (`cos/sin`) only holds that for *uncorrelated* wet paths; the
+chorus and the delay's first taps are strongly correlated with the dry signal,
+so equal-power would put up to +3 dB in the middle of the control — a smaller
+version of the fault being fixed.
+**Tradeoffs:** on the reverb, where the wet path really is uncorrelated, a
+linear crossfade dips ~3 dB at Mix 0.5. Audible as a slight loss of body
+mid-sweep; measurable, predictable, and cheaper than a control that lies.
+**Revisit if:** reverb Mix sweeps read as a dip in practice — the fix would be
+per-effect laws, not one law everywhere.
+
+## 2026-08-10 — Normalise the reverb against comb feedback AND damping
+
+**Decision:** divide the comb feed by `sqrt(P)` where
+`P = 1 + f²(1-d)²/sqrt(A² - 4d²)`, `A = 1 + d² - f²(1-d)²` — the closed-form
+broadband power gain of one damped comb.
+**Context:** sappedal v0.14 fixed the same class of bug for Sapprack by
+normalising its wet path against the comb bank rather than clamping the output.
+The pattern transfers; the constant does not. sappsynth's combs carry a
+damping one-pole in the feedback path, which flattens the gain-vs-feedback
+curve a lot: measured, Size 0 → 1 moves the wet level only 3.4 dB, where the
+undamped `1/sqrt(1-f²)` model predicts 11 dB. Normalising with the undamped
+model would have over-corrected the cathedral end by ~7 dB and made big rooms
+quieter than small ones.
+**Alternatives considered:** the `(1-f²)^0.25` prototype recorded in issue #2
+(empirical, still 5.5 dB of tilt against a 3.4 dB fault); a fitted polynomial
+in Size (works, explains nothing, breaks if the Size→feedback map moves).
+**Tradeoffs:** the four Schroeder sections in this topology are not unity-gain
+(+7.3 dB over the chain) and the eight combs' `sqrt(8)` is also constant, so
+both live in a single measured trim, `kWetReference = 0.0655`. If the tunings
+or the section count change, that constant has to be re-measured — the test
+suite is what catches it.
+**Revisit if:** damping becomes a user parameter (it is fixed at 0.4), which
+would make the model's `d` term matter dynamically.
 
 ## 2026-08-06 — All UI art is generated, not sourced
 

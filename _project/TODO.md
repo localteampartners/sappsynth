@@ -38,6 +38,11 @@ For "what's broken," also see CURRENT_STATE.md's known-issues section.
 
 ## Done (recent, rolling)
 
+- 2026-08-10 — v0.11.0, issue #2: reverb wet path normalised (Size = tail, not
+  level), all three effect Mix controls crossfade, output drive unity at unity,
+  voice bus bracketed with 20 dB of headroom so chords stop self-clipping.
+  Bank re-levelled; `tests/unit/test_gainstaging.cpp` guards all four.
+
 - 2026-08-06 — SappLink CC-in (20-CC manifest mapping, slew, drift test);
   sapptune manifest corrected to the plugin's real ranges.
 - 2026-08-06 — v0.5.0: Analog DNA, searchable preset browser, ~75 presets.

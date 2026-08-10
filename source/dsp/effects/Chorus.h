@@ -69,8 +69,11 @@ public:
             lpState[0] += lpCoef * (wetL * 0.5f - lpState[0]);
             lpState[1] += lpCoef * (wetR * 0.5f - lpState[1]);
 
-            left[i] += mix * (lpState[0] - left[i] * 0.5f * mix);
-            right[i] += mix * (lpState[1] - right[i] * 0.5f * mix);
+            // Crossfade, not a boost (issue #2, fault 2). The old form kept the
+            // dry signal at full level and added the wet on top, so Mix was a
+            // level control with a chorus attached.
+            left[i] += mix * (lpState[0] - left[i]);
+            right[i] += mix * (lpState[1] - right[i]);
 
             writeIndex = (writeIndex + 1) & mask;
             phase[0] += inc0; phase[1] += inc1; phase[2] += inc2;

@@ -22,6 +22,21 @@ namespace sappsynth {
 class SynthEngine
 {
 public:
+    // Voice-bus headroom (issue #2, fault 4). Voices sum with a single-note
+    // peak near -2 dBFS, so a chord ran straight into the output drive's
+    // saturator: the peak of a Dark Cathedral chord stopped growing at SIX
+    // notes and sat at +3.4 dBFS all the way to twelve — 15 dB of soft
+    // clipping the engine applied to itself.
+    //
+    // The nonlinear tail of the chain (drive -> FX -> ceiling) is bracketed:
+    // the summed bus is scaled DOWN by kBusHeadroom going in and the makeup is
+    // taken after the Master fader. So the saturator sees 20 dB of headroom
+    // and a 16-note chord never reaches it, while the end-to-end gain
+    // structure — and therefore the Master parameter's -60..+6 dB range, which
+    // hosts have saved in sessions — is untouched.
+    static constexpr float kBusHeadroom = 0.1f;    // -20 dB into the nonlinearities
+    static constexpr float kBusMakeup   = 10.0f;   // and back out after Master
+
     void prepare(double sampleRate, int maxBlockSize);
     void reset();
 

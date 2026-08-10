@@ -2,7 +2,8 @@
 
 <!-- UPDATE WHEN: a feature ships, a deploy happens, something breaks, or something gets fixed. This file answers "what's the project like *right now*?" -->
 
-**Last verified:** 2026-08-10 (full-polyphony preset audit + auval verified)
+**Last verified:** 2026-08-10 (v0.11.0 gain-staging rework: preset audit
+re-levelled, 68 tests green, auval PASS)
 
 ---
 
@@ -16,7 +17,15 @@
   stereo spread, gain-compensated), glide (exponential portamento),
   velocity → amp/cutoff.
 - **Effects** (post-sum, §7 order): 3-tap BBD-style chorus, tape-darkened
-  ping-pong echo, Freeverb-topology reverb.
+  ping-pong echo, Freeverb-topology reverb. Every Mix is a linear dry/wet
+  crossfade; the reverb's wet path is normalised against the comb bank, so
+  `Verb Size` moves the tail (0.60 s → 8.05 s) and not the level (0.6 dB).
+- **Gain staging is structural, not a calibration** (issue #2, v0.11.0). The
+  voice bus runs 20 dB below the drive/FX/ceiling section and the makeup is
+  taken after Master, so the saturators have headroom a 16-note chord cannot
+  reach; the soft knee (`dsp/nonlinear/OutputStage.h`) is bit-exact unity below
+  -6 dBFS. `Out Drive` at 0 dB measures 0.00 dB, and a chord's peak grows with
+  every added note instead of flattening at six.
 - **Structured variation**: unit/voice/note seed hierarchy, correlated OU
   drift, thermal warm-up; fixed unit seed ⇒ bit-identical renders.
 - **Quality modes**: Eco/Normal/High (1x/2x/4x island); switches wait for
@@ -39,19 +48,20 @@
 - **Tooling**: `sapp-render`, `sapp-bench`, `SappUiShot` (offscreen editor →
   PNG), `scripts/generate_ui_assets.py` (all UI art is procedural),
   analysis scripts.
-- **Tests**: 64 Catch2 cases green (`./verify.sh` ≈ 40 s). **CI**: GitHub
+- **Tests**: 68 Catch2 cases green (`./verify.sh` ≈ 40 s). **CI**: GitHub
   Actions — core tests on macOS/Windows/Linux, full plugin build + pluginval
   (strictness 5) on macOS.
-- **Preset levels**: all 186 presets peak at -6 dBFS on their worst case,
-  measured at full polyphony (eight notes, full velocity) across four voice-card
-  positions. `tools/preset-audit` is the pre-release gate (~7 min);
+- **Preset levels**: all 186 presets peak at -6 dBFS (range -7.8..-5.9, none
+  above the -3 dBFS ceiling) on their worst case, measured at full polyphony
+  (eight notes, full velocity) across four voice-card positions. `tools/preset-audit` is the pre-release gate (~7 min);
   `tests/unit/test_headroom.cpp` is the fast guard inside verify.sh.
 
 ## What's deployed
 
 - GitHub repo (build from source) + v0.2.0 release with unsigned macOS arm64
   binaries (Standalone/VST3/AU). Local builds copy plugins into
-  `~/Library/Audio/Plug-Ins/`. Current source version is 0.10.0 (untagged).
+  `~/Library/Audio/Plug-Ins/`. Current source version is 0.11.0 (untagged; v0.10.0 is the
+  latest tag).
 
 ## What's known broken / flaky
 
@@ -64,13 +74,13 @@
   (`xattr -dr com.apple.quarantine`). Signing needs a Developer ID.
 - Windows plugin build untested (core tests run in CI; plugin job is
   macOS-only).
-- Output gain staging is levelled, not structural — **issue #2**. Measured while
-  closing issue #1 and deliberately left alone (DECISIONS.md 2026-08-10): the reverb's wet
-  path runs 10-30 dB above the dry signal and Size acts as a ~10 dB loudness
-  control; all three effect Mix controls add wet on top of an untouched dry
-  signal instead of crossfading; and a chord's peak stops growing between 6 and
-  12 notes because the engine soft-clips internally to hold it. Nothing clips at
-  the output, but the plugin distorts itself to stay there.
+- **Nothing has been listened to.** Every level claim in this project is
+  measured offline (peak/RMS/decay); no one has heard v0.11.0's drier reverb or
+  its cleaner chords. A DAW play-test is item 2 in TODO.md.
+- The plugin no longer bounds its own output: with the ceiling moved 20 dB
+  above the bus nominal (DECISIONS.md 2026-08-10), a user who cranks Master on
+  a levelled patch will leave full scale where the old engine soft-clipped.
+  Deliberate — a fader should be a fader — but it is a behaviour change.
 
 ## Half-finished or abandoned
 

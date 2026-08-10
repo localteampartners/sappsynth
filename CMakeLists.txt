@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(SappSynth VERSION 0.10.0 LANGUAGES C CXX)
+project(SappSynth VERSION 0.11.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -54,6 +54,7 @@ if(SAPPSYNTH_BUILD_TESTS)
     tests/unit/test_engine.cpp
     tests/unit/test_effects.cpp
     tests/unit/test_headroom.cpp
+    tests/unit/test_gainstaging.cpp
     tests/unit/test_arp.cpp
     tests/unit/test_dna.cpp
     tests/unit/test_sapplink.cpp

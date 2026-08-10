@@ -6,6 +6,72 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-08-10 — 0.11.0
+
+**This release changes the sound.** Four hidden gain stages (issue #2) are gone,
+and patches that leaned on them — reverb-heavy pads above all — are quieter,
+drier and cleaner than they were. That is the point of the release, but read
+"what to expect" below before you open an old project.
+
+- **The reverb's wet path is normalised, and `Verb Size` buys tail, not
+  loudness.** The comb bank was fed at a fixed 0.25 where Freeverb uses 0.015,
+  with nothing compensating for feedback, so the wet signal ran **+18.5 to
+  +21.8 dB above the dry one** and Size moved the level by 3.4 dB on the way
+  past. The feed is now divided by the comb bank's broadband gain — a closed
+  form in feedback *and* damping, because damping is what makes the naive
+  `1/sqrt(1-f^2)` over-correct the top of the range by ~7 dB. Full wet now
+  measures **-0.4 dB re dry and holds within 0.6 dB across the whole Size
+  range**, while the tail still runs 0.60 s → 8.05 s.
+- **All three Mix controls crossfade instead of adding.** Chorus, Delay and
+  Reverb each added wet on top of an untouched dry signal, so Mix could only
+  ever raise the level and at Mix 1 the dry was still fully there (Delay
+  0.0 dB of leakage, Reverb -3.1, Chorus -6.0). They are linear crossfades
+  now: `(1-m)·dry + m·wet`, exact to 1e-7, dry gone at Mix 1, and no
+  intermediate setting louder than its endpoints. Linear rather than
+  equal-power on purpose — the chorus and delay wet paths are correlated with
+  the dry one, so an equal-power law would put +3 dB in the middle of the
+  control, which is the fault being fixed.
+- **`Out Drive` is an honest gain.** The old stage normalised its `tanh()` at
+  full scale, which applied **+1.48 dB to everything below full scale** while
+  the comment claimed transparency, and turned 0 → 6 dB of drive into 3.1 dB.
+  It is a soft knee now (`source/dsp/nonlinear/OutputStage.h`): bit-exact
+  identity below -6 dBFS, C1-continuous at the knee, asymptotic to full scale.
+  0 dB measures **0.00 dB**, 6 dB measures 6.00 dB, through the engine too.
+- **Chords stop flattening.** Voices summed straight into that saturator, so a
+  Dark Cathedral chord at Master 0 measured -2.3 dBFS at one voice and then
+  **+3.39, +3.41, +3.41, +3.42 dBFS at five, six, seven and eight notes** —
+  15 dB of soft clipping the engine applied to itself on every dense chord.
+  The nonlinear tail of the chain is now bracketed: the bus is scaled down
+  20 dB going into drive/FX and the makeup is taken after the Master fader, so
+  the saturator sees headroom a 16-note chord cannot reach. The same curve now
+  reads **-3.0, +3.0, +5.3, +7.5, +9.4, +10.4, +11.3, +12.5 dBFS** — it grows.
+  The Master parameter's range is untouched, so saved automation still means
+  what it meant.
+- **The whole bank is re-levelled** against v0.10.0's eight-note chord with the
+  pinned, swept voice allocator. 186 presets, **peak -7.8 to -5.9 dBFS, median
+  -6.0, none above the -3 dBFS ceiling, none clipping** — and it converged in
+  one pass, which it could not have done while the engine was compressing
+  itself. Master trims now span -22.6..+6.0 dB instead of -44.1..+3.4: the
+  absurd trims existed to cancel the reverb.
+- **What to expect.** A factory preset loaded fresh still peaks at -6 dBFS, as
+  before. A *saved session* — or a patch of your own — keeps its stored Master
+  value, and at identical settings the engine now renders it **-6.3 dB
+  (median), from -25.6 dB to +16.2 dB**: 137 presets quieter, 49 louder.
+  Reverb-heavy pads lose the most (Deep Space -25.6, Dark Cathedral -22.9,
+  Glacier Pad -22.6); dense stabs that were being clipped get *louder*
+  (Industrial Stab +16.2, French Filter Lead +15.8). Raise your track fader.
+- **Reverb will sound drier, and Mix now means what it says.** At the bank's
+  median `Reverb` of 0.20 the wet used to sit **+6.0 dB above** the dry signal;
+  it now sits at **-12.3 dB** — an 18.3 dB shift. At 0.75 the shift is 9.9 dB
+  and the wet still leads by 9.3 dB. If a patch of yours sounded washed out,
+  it was getting *level*, not space: **raise its Reverb Mix**. Factory Mix
+  values are left exactly as authored — no crossfade setting can reproduce a
+  wet path that ran 20 dB hot, so remapping them would only be a guess.
+- New `tests/unit/test_gainstaging.cpp`: one case per fault (crossfade law,
+  Size-is-tail, unity-is-unity, peak-scales-with-polyphony). All four fail on
+  the pre-0.11 DSP — 17 failing assertions. Suite is 68 cases, `./verify.sh`
+  green, plugin built, **auval PASS**.
+
 ## 2026-08-10 — 0.10.0
 
 - **The preset bank is calibrated at full polyphony now** (issue #1). Voices sum

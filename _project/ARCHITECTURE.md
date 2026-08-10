@@ -57,9 +57,22 @@ Host/DAW (or Standalone)
       → per active voice: pitch model + drift → oscillators (base rate)
         → oversampled island: mixer saturation → DC block → ladder → VCA
         → pan → accumulate
-      → output soft drive → master gain
+      → x0.1 bus headroom → output drive → soft knee
+      → chorus → delay → reverb (each a dry/wet crossfade)
+      → soft knee → master gain x10 bus makeup
   → host buffers
 ```
+
+**Gain staging (v0.11.0, issue #2).** The nonlinear tail of the chain is
+bracketed: the summed voice bus is scaled down 20 dB (`kBusHeadroom`) going
+into the drive/FX section and the makeup is taken after the Master fader
+(`kBusMakeup`). The saturating stages therefore see 20 dB of headroom — a
+16-note chord never reaches them — while the end-to-end gain structure, and so
+the Master parameter's saved range, is unchanged. The soft knee
+(`dsp/nonlinear/OutputStage.h`) is bit-exact unity below -6 dBFS; it is a
+ceiling, not a tone stage. Every effect Mix is a linear crossfade, and the
+reverb's wet path is normalised against the comb bank's broadband gain so
+`Size` buys tail length only.
 
 ## Key directories
 

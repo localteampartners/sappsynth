@@ -23,6 +23,14 @@ public:
         lpState[0] = lpState[1] = 0.0f;
     }
 
+    // Nominal peak level of the bus feeding this delay. The feedback path's
+    // tape saturation is scaled to it, so lowering the bus for headroom does
+    // not quietly linearise the echoes.
+    void setLevelReference(float reference) noexcept
+    {
+        levelReference = std::max(reference, 1.0e-3f);
+    }
+
     void setParameters(float timeSeconds, float feedbackAmount, float mixAmount) noexcept
     {
         targetTime = std::clamp(timeSeconds, 0.03f, 1.5f) * static_cast<float>(sr);
@@ -66,14 +74,17 @@ public:
             lpState[0] += lpCoef * (tapL - lpState[0]);
             lpState[1] += lpCoef * (tapR - lpState[1]);
 
-            // Light ping-pong: feedback crosses channels a little.
+            // Light ping-pong: feedback crosses channels a little. The tape
+            // saturation is referenced to the bus's nominal level so it keeps
+            // the same character now that the bus runs with headroom (#2).
             lines[0][static_cast<std::size_t>(writeIndex)] =
-                left[i] + fastTanh((lpState[0] * 0.8f + lpState[1] * 0.2f) * feedback);
+                left[i] + saturate((lpState[0] * 0.8f + lpState[1] * 0.2f) * feedback);
             lines[1][static_cast<std::size_t>(writeIndex)] =
-                right[i] + fastTanh((lpState[1] * 0.8f + lpState[0] * 0.2f) * feedback);
+                right[i] + saturate((lpState[1] * 0.8f + lpState[0] * 0.2f) * feedback);
 
-            left[i] += mix * tapL;
-            right[i] += mix * tapR;
+            // Crossfade, not a boost (issue #2, fault 2).
+            left[i] += mix * (tapL - left[i]);
+            right[i] += mix * (tapR - right[i]);
             writeIndex = (writeIndex + 1) & mask;
         }
     }
@@ -81,7 +92,13 @@ public:
 private:
     static int nextPow2(int v) noexcept { int p = 1; while (p < v) p <<= 1; return p; }
 
+    float saturate(float x) const noexcept
+    {
+        return fastTanh(x / levelReference) * levelReference;
+    }
+
     std::vector<float> lines[2];
+    float levelReference { 1.0f };
     float lpState[2] { 0.0f, 0.0f };
     double sr { 48000.0 };
     int writeIndex { 0 };

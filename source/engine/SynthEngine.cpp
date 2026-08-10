@@ -1,6 +1,7 @@
 #include "SynthEngine.h"
 #include <algorithm>
 #include <cmath>
+#include "../dsp/nonlinear/OutputStage.h"
 #include "../dsp/utility/DenormalGuard.h"
 #include "../dsp/utility/FastMath.h"
 
@@ -33,6 +34,7 @@ void SynthEngine::prepare(double sampleRate, int maxBlockSize)
 
     chorus.prepare(sr);
     delayFx.prepare(sr);
+    delayFx.setLevelReference(kBusHeadroom);
     reverbFx.prepare(sr);
     smCutoff.reset(patch_.cutoffHz);
     smResonance.reset(patch_.resonance);
@@ -313,14 +315,15 @@ void SynthEngine::renderSpan(float* left, float* right, int numSamples)
                               effectivePatch_, unitProfile_, sharedMod);
         });
 
-        // Output drive: soft clip, normalized so drive=1 is transparent until
-        // it limits. Effects + master gain run once per block after all spans.
-        const float d = outputDriveLinear;
-        const float norm = 1.0f / fastTanh(std::max(d, 1.0f) * 0.8f);
+        // Bus headroom, then the output drive into the soft knee. At 0 dB
+        // drive this is exactly linear — the knee does not engage until the
+        // bus is 20 dB above its nominal level. Effects + master gain run once
+        // per block after all spans.
+        const float d = outputDriveLinear * kBusHeadroom;
         for (int i = offset; i < offset + chunk; ++i)
         {
-            left[i]  = fastTanh(left[i] * d * 0.8f) * norm;
-            right[i] = fastTanh(right[i] * d * 0.8f) * norm;
+            left[i]  = outputStage(left[i], d);
+            right[i] = outputStage(right[i], d);
         }
         offset += chunk;
     }
@@ -368,12 +371,15 @@ void SynthEngine::process(const RenderBlock& block)
     delayFx.process(block.left, block.right, block.numSamples);
     reverbFx.process(block.left, block.right, block.numSamples);
 
+    // Ceiling, then Master with the bus makeup folded in. The knee bounds what
+    // reaches the fader at full scale; on a levelled patch the bus is 20 dB
+    // below it and nothing is applied.
     smMaster.setTarget(dbToGain(patch_.masterDb));
     for (int i = 0; i < block.numSamples; ++i)
     {
-        const float master = smMaster.next();
-        block.left[i] *= master;
-        block.right[i] *= master;
+        const float master = smMaster.next() * kBusMakeup;
+        block.left[i] = softKnee(block.left[i]) * master;
+        block.right[i] = softKnee(block.right[i]) * master;
     }
 
     telemetryBus.push(block.left, block.right, block.numSamples);
