@@ -64,8 +64,8 @@
   (`xattr -dr com.apple.quarantine`). Signing needs a Developer ID.
 - Windows plugin build untested (core tests run in CI; plugin job is
   macOS-only).
-- Output gain staging is levelled, not structural. Measured while closing issue
-  #1 and deliberately left alone (see DECISIONS.md 2026-08-10): the reverb's wet
+- Output gain staging is levelled, not structural — **issue #2**. Measured while
+  closing issue #1 and deliberately left alone (DECISIONS.md 2026-08-10): the reverb's wet
   path runs 10-30 dB above the dry signal and Size acts as a ~10 dB loudness
   control; all three effect Mix controls add wet on top of an untouched dry
   signal instead of crossfading; and a chord's peak stops growing between 6 and
