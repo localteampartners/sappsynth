@@ -6,6 +6,22 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-08-10
+
+- **Fixed clipping across the whole preset bank.** 95 of 186 factory presets
+  clipped when played — peaks up to +19 dBFS — because nothing had ever
+  measured them. Every preset is now calibrated to peak at -6 dBFS, so the
+  bank is consistent and leaves headroom for the rest of the mix. This
+  affected the original presets as much as the newer ones.
+- New `tools/preset-audit`: renders every preset through the real processor
+  and reports peak/RMS, failing above -3 dBFS. It measures four registers
+  (low/mid/high single notes and a four-note chord) and takes the loudest,
+  because one test signal cannot represent basses, leads and pads alike — a
+  mono bass with a 300 Hz filter is nearly silent under a C4 chord. It also
+  settles the preset-change transient *before* the note rather than skipping
+  the note's first 200 ms, which would miss short percussive patches.
+  Documented as a pre-release step in RUNBOOK.
+
 ## 2026-08-08
 
 - **User presets** — save the sound you have and get it back. The SAVE button

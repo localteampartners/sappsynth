@@ -79,3 +79,16 @@ git revert <sha> && git push   # or /rollback via sapp-snapshot for suite-wide b
    means a determinism regression, which is a bug, full stop.
 5. CPU spikes: `./build-core/sapp-bench` and compare against the numbers in
    CURRENT_STATE.md.
+
+## Preset levels (run before any release that touches the bank)
+
+    cmake --build build --target preset-audit
+    ./build/preset-audit_artefacts/Release/preset-audit
+
+Renders every factory preset across four registers (low/mid/high single
+notes plus a four-note chord) and reports peak/RMS. It exits non-zero if any
+preset peaks above -3 dBFS. The bank is calibrated so every preset peaks at
+-6 dBFS, which is what stops presets clipping the moment they are loaded.
+Not in verify.sh: it takes ~3 minutes, well past that script's budget.
+
+`--trims` prints `name|peak|master` for re-calibration.

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(SappSynth VERSION 0.9.0 LANGUAGES C CXX)
+project(SappSynth VERSION 0.9.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -135,6 +135,28 @@ if(SAPPSYNTH_BUILD_PLUGIN)
   )
 
   if(APPLE)
+    # Level audit: renders every factory preset and reports peak/RMS, so the
+    # bank is levelled by measurement rather than by ear.
+    juce_add_console_app(preset-audit PRODUCT_NAME "preset-audit")
+    target_sources(preset-audit PRIVATE
+      tools/preset-audit/main.cpp
+      source/plugin/PluginProcessor.cpp
+      source/plugin/PluginEditor.cpp
+      source/plugin/FactoryPresets.cpp
+      source/plugin/UserPresets.cpp
+      source/plugin/SappLinkCCMap.cpp
+    )
+    target_include_directories(preset-audit PRIVATE source/plugin)
+    target_link_libraries(preset-audit PRIVATE
+      sappsynth_core
+      SappSynthAssets
+      juce::juce_audio_utils
+      juce::juce_dsp
+      juce::juce_recommended_config_flags
+    )
+    target_compile_definitions(preset-audit PRIVATE
+      JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JucePlugin_VersionString="audit")
+
     # Offscreen editor snapshot tool (UI verification without screen capture).
     juce_add_gui_app(SappUiShot PRODUCT_NAME "SappUiShot")
     target_sources(SappUiShot PRIVATE
