@@ -251,7 +251,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     layout.add(std::make_unique<P>(ID{p::subLevel, 1}, "Sub Level", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
     layout.add(std::make_unique<P>(ID{p::noiseLevel, 1}, "Noise Level", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
 
-    layout.add(std::make_unique<P>(ID{p::mixerDrive, 1}, "Mix Drive", logRange(1.0f, 8.0f), 1.2f));
+    // Mix Drive reaches below unity (issue #1). The old 1..8 range meant the
+    // control could not be switched off — 1.0 was the floor and the default was
+    // 1.2, so every patch shipped with the mixer saturator already engaged.
+    // 1.0 is now the default and the transparent setting, and the range extends
+    // down to 0.25 so the mixer can be run clean or backed off. Saved sessions
+    // keep their stored value (APVTS stores real values, and the old range is
+    // inside the new one); host automation lanes written against 1..8 remap.
+    layout.add(std::make_unique<P>(ID{p::mixerDrive, 1}, "Mix Drive", logRange(0.25f, 8.0f), 1.0f));
     layout.add(std::make_unique<P>(ID{p::mixerChar, 1}, "Mix Character", juce::NormalisableRange<float>(0.0f, 1.0f), 0.15f));
 
     layout.add(std::make_unique<P>(ID{p::cutoff, 1}, "Cutoff", logRange(20.0f, 20000.0f), 9000.0f));
@@ -317,8 +324,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
 
     layout.add(std::make_unique<P>(ID{p::outputDrive, 1}, "Out Drive",
                                    juce::NormalisableRange<float>(0.0f, 24.0f, 0.1f), 0.0f));
+    // Master floor drops to -60 dB (issue #1). The bank is calibrated at full
+    // polyphony now, and the densest pads were already pinned at the old -40
+    // floor with a four-note calibration — they had no trim left to give. The
+    // top of the range is unchanged; widening downward keeps every saved value
+    // valid, though automation lanes written against -40..+6 remap.
     layout.add(std::make_unique<P>(ID{p::master, 1}, "Master",
-                                   juce::NormalisableRange<float>(-40.0f, 6.0f, 0.1f), -6.0f));
+                                   juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), -6.0f));
     layout.add(std::make_unique<Pc>(ID{p::quality, 1}, "Quality",
                                     juce::StringArray { "Eco", "Normal", "High" }, 1));
 

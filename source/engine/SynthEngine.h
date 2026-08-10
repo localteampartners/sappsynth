@@ -25,6 +25,14 @@ public:
     void prepare(double sampleRate, int maxBlockSize);
     void reset();
 
+    // Silence everything AND park the voice allocator on a known card, so a
+    // measurement does not inherit the cursor position the previous notes left
+    // behind (see VoiceManager::resetAllocation).
+    void resetVoiceAllocation(int startCard = 0) noexcept
+    {
+        voiceManager.resetAllocation(startCard);
+    }
+
     // Deterministic mode: fixing the unit seed reproduces a render exactly.
     void setUnitSeed(std::uint64_t seed);
     std::uint64_t unitSeed() const noexcept { return unitSeed_; }

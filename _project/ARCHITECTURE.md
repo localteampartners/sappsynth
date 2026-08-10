@@ -20,12 +20,17 @@ what-exists-now summary.
 
 - **sappsynth_core** (`source/engine`, `source/dsp`, `source/lab`) — static
   lib: voices, DSP, offline renderer, analyzer. Runs in tests/CLIs with no
-  JUCE.
+  JUCE. Also carries the factory bank (`source/plugin/FactoryPresets.cpp` is
+  plain data) and `engine/PresetPatch` — a JUCE-free copy of the APVTS →
+  PatchState mapping, so level regressions can render every preset in the fast
+  unit suite. `preset-audit --defaults` guards the two against drift.
 - **SynthEngine** — event-split block rendering (sample-accurate note
   events), control-rate shared modulation (LFO, unit drift, warm-up),
   parameter smoothing, output stage.
 - **VoiceManager** — 16 fixed voice cards, round-robin allocation,
-  oldest-active stealing, polyphony limit.
+  oldest-active stealing, polyphony limit. `resetAllocation(card)` pins the
+  cursor: cards carry their own gain/pan tolerances, so measurement code must
+  choose the allocation rather than inherit it.
 - **SynthVoice** — per-card identity + tolerances; VCOs → nonlinear mixer →
   DC blocker → ZDF ladder → modeled VCA inside a 1x/2x/4x oversampled island.
 - **Variation system** (`source/dsp/variation`) — seed hierarchy
@@ -83,3 +88,7 @@ Host/DAW (or Standalone)
   (32) or island scratch buffers overflow.
 - Editor `addSection` returns references into a vector — `sections.reserve`
   in the constructor guards reallocation; keep it if sections are added.
+- Voices sum onto the bus with no headroom scaling, so a patch's peak grows with
+  the note count. Preset levels are a *calibration* against that (RUNBOOK,
+  "Preset levels"), not a property the engine enforces — anything that changes
+  level means re-levelling the bank.

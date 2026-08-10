@@ -2,7 +2,7 @@
 
 <!-- UPDATE WHEN: a feature ships, a deploy happens, something breaks, or something gets fixed. This file answers "what's the project like *right now*?" -->
 
-**Last verified:** 2026-08-08 (preset round-trip + auval verified)
+**Last verified:** 2026-08-10 (full-polyphony preset audit + auval verified)
 
 ---
 
@@ -39,14 +39,19 @@
 - **Tooling**: `sapp-render`, `sapp-bench`, `SappUiShot` (offscreen editor →
   PNG), `scripts/generate_ui_assets.py` (all UI art is procedural),
   analysis scripts.
-- **Tests**: 47 Catch2 cases green. **CI**: GitHub Actions — core tests on
-  macOS/Windows/Linux, full plugin build + pluginval (strictness 5) on macOS.
+- **Tests**: 64 Catch2 cases green (`./verify.sh` ≈ 40 s). **CI**: GitHub
+  Actions — core tests on macOS/Windows/Linux, full plugin build + pluginval
+  (strictness 5) on macOS.
+- **Preset levels**: all 186 presets peak at -6 dBFS on their worst case,
+  measured at full polyphony (eight notes, full velocity) across four voice-card
+  positions. `tools/preset-audit` is the pre-release gate (~7 min);
+  `tests/unit/test_headroom.cpp` is the fast guard inside verify.sh.
 
 ## What's deployed
 
 - GitHub repo (build from source) + v0.2.0 release with unsigned macOS arm64
   binaries (Standalone/VST3/AU). Local builds copy plugins into
-  `~/Library/Audio/Plug-Ins/`.
+  `~/Library/Audio/Plug-Ins/`. Current source version is 0.10.0 (untagged).
 
 ## What's known broken / flaky
 
@@ -59,6 +64,13 @@
   (`xattr -dr com.apple.quarantine`). Signing needs a Developer ID.
 - Windows plugin build untested (core tests run in CI; plugin job is
   macOS-only).
+- Output gain staging is levelled, not structural. Measured while closing issue
+  #1 and deliberately left alone (see DECISIONS.md 2026-08-10): the reverb's wet
+  path runs 10-30 dB above the dry signal and Size acts as a ~10 dB loudness
+  control; all three effect Mix controls add wet on top of an untouched dry
+  signal instead of crossfading; and a chord's peak stops growing between 6 and
+  12 notes because the engine soft-clips internally to hold it. Nothing clips at
+  the output, but the plugin distorts itself to stay there.
 
 ## Half-finished or abandoned
 
@@ -66,6 +78,13 @@
   envelopes from current level instead); kept for a future two-step steal.
 - MPE, mod matrix beyond the fixed routes, tempo-synced LFO/delay, stage
   solo/bypass and the experiment runner — deferred, see TODO.md.
+
+## 2026-08-10 — preset levels
+
+Presets are levelled by `tools/preset-audit` and re-levelled with
+`scripts/level_presets.py` (see RUNBOOK). Two rules the audit has to keep: the
+chord pass is eight notes at full velocity, and the voice allocator is pinned
+and swept — without the second, every number depends on the ORDER of the bank.
 
 ## 2026-08-08 — preset library
 

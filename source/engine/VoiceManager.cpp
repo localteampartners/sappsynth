@@ -30,6 +30,15 @@ void VoiceManager::applyQuality(const ProcessingQuality& quality)
         voice.applyQuality(quality);
 }
 
+void VoiceManager::resetAllocation(int startCard) noexcept
+{
+    for (auto& voice : voices)
+        voice.hardStop();
+    allocationCounter = 0;
+    noteCounter = 0;
+    roundRobinCursor = ((startCard % kMaxVoices) + kMaxVoices) % kMaxVoices;
+}
+
 int VoiceManager::activeVoiceCount() const noexcept
 {
     int count = 0;

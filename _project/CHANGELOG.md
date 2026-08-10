@@ -6,6 +6,45 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-08-10 — 0.10.0
+
+- **The preset bank is calibrated at full polyphony now** (issue #1). Voices sum
+  onto a bus with no headroom scaling, so a patch keeps getting louder the more
+  notes you hold — but the bank had been levelled against a *four-note* chord.
+  Hold eight and 10 of the 186 presets went over the -3 dBFS ship ceiling, one
+  of them to full scale. `preset-audit`'s chord pass is eight notes at full
+  velocity, and the bank is re-levelled against it: every preset now peaks at
+  -6 dBFS on the worst case a player can actually hit.
+- **The audit no longer depends on the order of the bank.** The 16 voice cards
+  carry their own gain and pan tolerances, so the same chord measures up to
+  3.5 dB apart depending on which cards the round-robin allocator lands on —
+  and the audit inherited whatever cursor the previous preset left behind.
+  `preset-audit` now pins the allocator (`SynthEngine::resetVoiceAllocation`)
+  and measures the chord from four card positions, keeping the loudest.
+- **What this means for your projects:** factory preset levels moved, by
+  -6.1 dB at most and +10.0 dB at most, median -0.1 dB — 100 presets got
+  quieter, 71 louder. The DSP is untouched, so a patch you built yourself
+  sounds and measures exactly as it did. The four presets named in issue #1
+  now peak at -6.2 (Dark Cathedral), -5.7 (Metal Drone), -5.6 (Glacier Pad)
+  and -6.0 dBFS (Warm Tape Pad) on an eight-note chord, against -2.1, -2.6,
+  -3.3 and -5.6 before.
+- **`Mix Drive` reaches unity.** It ran 1..8 with a default of 1.2, so the
+  mixer saturator could not be switched off and every patch shipped with it
+  already engaged. The range is 0.25..8 and the default is 1.0 — transparent.
+- **`Master` reaches -60 dB** (was -40). The densest pads were pinned at the
+  old floor with nothing left to give. Both range changes keep every saved
+  value valid, but host automation lanes written against the old ranges remap.
+- New `tests/unit/test_headroom.cpp`: the whole bank under the ship ceiling at
+  full polyphony, the hottest pads under it from every voice-card position,
+  peak growing with note count, and `Mix Drive` reaching below unity. All five
+  fail on the four-note calibration.
+- New `scripts/level_presets.py` — turns a `preset-audit --trims` report into
+  the bank's new `output.master.db` values, so re-levelling is reproducible
+  instead of manual.
+- New `source/engine/PresetPatch.{h,cpp}`: the factory bank rendered without
+  JUCE, so level regressions can live in the fast unit suite.
+  `preset-audit --defaults` proves it still matches the live APVTS defaults.
+
 ## 2026-08-10
 
 - **Fixed clipping across the whole preset bank.** 95 of 186 factory presets

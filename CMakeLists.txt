@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(SappSynth VERSION 0.9.1 LANGUAGES C CXX)
+project(SappSynth VERSION 0.10.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,8 +24,12 @@ add_library(sappsynth_core STATIC
   source/engine/SynthEngine.cpp
   source/engine/SynthVoice.cpp
   source/engine/VoiceManager.cpp
+  source/engine/PresetPatch.cpp
   source/lab/OfflineRenderer.cpp
   source/lab/SignalAnalyzer.cpp
+  # Framework-free despite living under source/plugin: the bank is plain data,
+  # and the core needs it so level regressions can render every factory preset.
+  source/plugin/FactoryPresets.cpp
 )
 target_include_directories(sappsynth_core PUBLIC source)
 sappsynth_set_warnings(sappsynth_core)
@@ -49,6 +53,7 @@ if(SAPPSYNTH_BUILD_TESTS)
     tests/unit/test_drift.cpp
     tests/unit/test_engine.cpp
     tests/unit/test_effects.cpp
+    tests/unit/test_headroom.cpp
     tests/unit/test_arp.cpp
     tests/unit/test_dna.cpp
     tests/unit/test_sapplink.cpp
@@ -114,7 +119,6 @@ if(SAPPSYNTH_BUILD_PLUGIN)
   target_sources(SappSynthPlugin PRIVATE
     source/plugin/PluginProcessor.cpp
     source/plugin/PluginEditor.cpp
-    source/plugin/FactoryPresets.cpp
     source/plugin/UserPresets.cpp
     source/plugin/SappLinkCCMap.cpp
   )
@@ -142,7 +146,6 @@ if(SAPPSYNTH_BUILD_PLUGIN)
       tools/preset-audit/main.cpp
       source/plugin/PluginProcessor.cpp
       source/plugin/PluginEditor.cpp
-      source/plugin/FactoryPresets.cpp
       source/plugin/UserPresets.cpp
       source/plugin/SappLinkCCMap.cpp
     )
@@ -163,7 +166,6 @@ if(SAPPSYNTH_BUILD_PLUGIN)
       tools/sapp-uishot/main.cpp
       source/plugin/PluginProcessor.cpp
       source/plugin/PluginEditor.cpp
-      source/plugin/FactoryPresets.cpp
       source/plugin/UserPresets.cpp
       source/plugin/SappLinkCCMap.cpp
     )

@@ -27,6 +27,35 @@ Write decisions where someone smart would reasonably pick differently.
 
 ## Entries
 
+## 2026-08-10 — Level the bank at full polyphony; leave the gain staging alone
+
+**Decision:** answer issue #1 by calibrating the factory bank against an
+eight-note chord and a swept voice-card allocation, and by fixing `Mix Drive`'s
+range. Do NOT change the voice-sum gain staging, the output drive stage, or the
+effects.
+**Context:** the issue reported chords leaving the plugin at +15 dBFS. That was
+measured before the 2026-08-09 bank levelling, which had already brought it
+down — the four named presets sit at -2 to -6 dBFS now. What actually survived
+was narrower: the bank was calibrated on a four-note chord while voices sum with
+no headroom scaling, so eight notes put 10 presets over the ship ceiling and one
+at full scale, and the audit inherited an arbitrary allocator cursor worth up to
+3.5 dB.
+**Alternatives considered:** re-staging the whole output path — a headroom
+constant on the voice bus, a soft-knee ceiling before Master, normalising the
+reverb's wet path and turning the effect Mix controls into real crossfades.
+Measured and prototyped: the reverb wet path really is 10-30 dB hot and Size
+really is a 10 dB loudness control, and a chord's peak flattens between 6 and 12
+notes because the engine soft-clips internally to hold it. But that rework
+changes the sound of every preset and every saved session, and the guarantee the
+issue asked for can be made true without it.
+**Tradeoffs:** the guarantee is a calibration, not a structural property — a
+preset that is edited hot can still be pushed over, and the engine still
+compresses itself at high note counts. The audit is now ~7 minutes instead of
+~3 because the chord pass runs four times.
+**Revisit if:** users report grain or pumping on dense chords, or the reverb's
+level-follows-Size behaviour becomes a complaint in its own right. Both are
+measured and written up in issue #1's closing comment.
+
 ## 2026-08-06 — All UI art is generated, not sourced
 
 **Decision:** every visual asset (walnut, panel, knobs, screws) is rendered by

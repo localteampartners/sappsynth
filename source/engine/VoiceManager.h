@@ -17,6 +17,13 @@ public:
     void setUnitSeed(std::uint64_t unitSeed);
     void applyQuality(const ProcessingQuality& quality);
 
+    // Silences every card and parks the round-robin cursor on `startCard`.
+    // Which cards a chord lands on is audible: each card carries its own gain
+    // and pan tolerances, so the same chord measures up to 3.5 dB apart
+    // depending on where the cursor happens to be. Measurement code needs to
+    // pin it (and to sweep it) rather than inherit whatever the last note left.
+    void resetAllocation(int startCard = 0) noexcept;
+
     // glideFromNote: previous note for portamento, -1 for none.
     void noteOn(int note, float velocity, const PatchState& patch, const UnitProfile& unit,
                 int glideFromNote = -1);

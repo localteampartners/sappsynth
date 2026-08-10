@@ -87,12 +87,15 @@ public:
     // Lab view access (telemetry tap + A/B flags live on the engine).
     SynthEngine& synthEngine() noexcept { return engine; }
 
+    // Public so `preset-audit --defaults` can prove the JUCE-free
+    // sappsynth::defaultPatch() still matches what a defaulted APVTS produces.
+    PatchState buildPatchFromParameters();
+
     juce::AudioProcessorValueTreeState apvts;
     juce::MidiKeyboardState keyboardState;
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
-    PatchState buildPatchFromParameters();
 
     SynthEngine engine;
     std::vector<Event> eventScratch;

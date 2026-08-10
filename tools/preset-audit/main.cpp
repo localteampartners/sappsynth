@@ -17,6 +17,7 @@
 #include "FactoryPresets.h"
 #include "../../source/parameters/ParameterIds.h"
 #include "PluginProcessor.h"
+#include "../../source/engine/PresetPatch.h"
 
 namespace
 {
@@ -28,12 +29,18 @@ constexpr int    kBlockSize  = 512;
 // chord, and calibrating from that would boost it into distortion when
 // actually played low. Each preset is measured across four passes and the
 // loudest wins — the worst case a player can actually hit.
-struct TestPass { int notes[4]; int count; };
+//
+// The chord pass is EIGHT notes at full velocity, not four (issue #1). Voices
+// sum on a bus with no headroom scaling, so peak keeps growing with the note
+// count: calibrating on a four-note chord left 10 of 186 presets above the
+// ship ceiling when eight notes were held, and one of them reached full scale.
+// Eight is the default polyphony — the realistic worst case a player hits.
+struct TestPass { int notes[8]; int count; };
 constexpr TestPass kPasses[] = {
-    { { 36,  0,  0,  0 }, 1 },   // low single note (bass register)
-    { { 48,  0,  0,  0 }, 1 },   // mid single note
-    { { 60,  0,  0,  0 }, 1 },   // upper single note (leads)
-    { { 48, 55, 60, 64 }, 4 },   // four-note chord (pads, poly stacks)
+    { { 36,  0,  0,  0,  0,  0,  0,  0 }, 1 },   // low single note (bass register)
+    { { 48,  0,  0,  0,  0,  0,  0,  0 }, 1 },   // mid single note
+    { { 60,  0,  0,  0,  0,  0,  0,  0 }, 1 },   // upper single note (leads)
+    { { 36, 43, 48, 52, 55, 60, 64, 67 }, 8 },   // eight-note chord (full polyphony)
 };
 
 constexpr float kTargetPeakDb = -6.0f;   // where a preset should sit
@@ -42,9 +49,15 @@ constexpr float kCeilingDb    = -3.0f;   // above this it is too hot to ship
 struct Measurement { float peak = 0.0f; float rms = 0.0f; };
 
 Measurement renderOnePass (sappsynth::SappSynthProcessor& processor, int index,
-                           const TestPass& pass)
+                           const TestPass& pass, int startCard)
 {
     processor.applyFactoryPreset (index);
+    // Park the voice allocator. Each of the 16 cards carries its own gain and
+    // pan tolerances, so the same chord measures up to 3.5 dB apart depending
+    // on which cards it lands on. Without this the audit inherits whatever
+    // cursor the previous preset left, which made every number depend on the
+    // ORDER of the bank — insert a preset and the ones after it re-measure.
+    processor.synthEngine().resetVoiceAllocation (startCard);
 
     juce::AudioBuffer<float> buffer (2, kBlockSize);
     juce::MidiBuffer midi;
@@ -100,13 +113,29 @@ Measurement renderOnePass (sappsynth::SappSynthProcessor& processor, int index,
     return result;
 }
 
+// Card positions the chord pass is measured from. Sweeping all 16 would take
+// four times as long for ~0.3 dB more worst case; these four cover the spread.
+constexpr int kChordStartCards[] = { 0, 4, 8, 12 };
+
 Measurement renderPreset (sappsynth::SappSynthProcessor& processor, int index)
 {
     Measurement worst;
     for (const auto& pass : kPasses)
     {
-        const auto m = renderOnePass (processor, index, pass);
-        if (m.peak > worst.peak) worst = m;
+        if (pass.count == 1)
+        {
+            const auto m = renderOnePass (processor, index, pass, 0);
+            if (m.peak > worst.peak) worst = m;
+            continue;
+        }
+        // A chord spans several cards, so the allocation it starts from is what
+        // decides its peak. Calibrate against the worst one a player can hit,
+        // not against whichever one this run happened to produce.
+        for (int startCard : kChordStartCards)
+        {
+            const auto m = renderOnePass (processor, index, pass, startCard);
+            if (m.peak > worst.peak) worst = m;
+        }
     }
     return worst;
 }
@@ -115,14 +144,36 @@ Measurement renderPreset (sappsynth::SappSynthProcessor& processor, int index)
 int main (int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI juceInit;
-    bool trimsOnly = false;
+    bool trimsOnly = false, defaultsOnly = false;
     for (int i = 1; i < argc; ++i)
-        if (juce::String (argv[i]) == "--trims")
-            trimsOnly = true;
+    {
+        if (juce::String (argv[i]) == "--trims")    trimsOnly = true;
+        if (juce::String (argv[i]) == "--defaults") defaultsOnly = true;
+    }
 
     sappsynth::SappSynthProcessor processor;
     processor.setRateAndBufferSizeDetails (kSampleRate, kBlockSize);
     processor.prepareToPlay (kSampleRate, kBlockSize);
+
+    if (defaultsOnly)
+    {
+        // The unit suite renders the factory bank without JUCE, using
+        // sappsynth::defaultPatch() as the starting point. That is a hand copy
+        // of the APVTS defaults, so prove the two still agree — a changed
+        // parameter default would otherwise make every core-side level
+        // measurement quietly wrong.
+        const auto* difference = sappsynth::firstPatchDifference (
+            processor.buildPatchFromParameters(), sappsynth::defaultPatch());
+        if (difference != nullptr)
+        {
+            std::printf ("defaultPatch() disagrees with the APVTS defaults at: %s\n"
+                         "Update defaultPatch() in source/engine/PresetPatch.cpp.\n",
+                         difference);
+            return 1;
+        }
+        std::printf ("defaultPatch() matches the APVTS defaults\n");
+        return 0;
+    }
 
     const auto& bank = sappsynth::presets::all();
     int tooHot = 0, clipping = 0;

@@ -33,7 +33,7 @@ struct PatchState
     // (classic FM/clang territory; §8.5). 0..1 panel value.
     float osc2ToOsc1Fm { 0.0f };
 
-    float mixerDrive { 1.0f };      // 1..8 linear
+    float mixerDrive { 1.0f };      // 0.25..8 linear (1 = transparent)
     float mixerCharacter { 0.1f };  // 0..1 -> asymmetry
 
     float cutoffHz { 12000.0f };
