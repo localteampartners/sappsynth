@@ -107,6 +107,7 @@ struct PatchState
 
     float outputDriveDb { 0.0f };     // 0..24 into the output saturator
     float masterDb { -6.0f };
+    float trimDb { 0.0f };            // the preset's level trim (v0.15), not on any CC
 
     QualityMode quality { QualityMode::Normal };
 };

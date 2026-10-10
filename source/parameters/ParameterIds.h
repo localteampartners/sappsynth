@@ -90,6 +90,10 @@ inline constexpr const char* warmup        = "variation.warmup";
 
 inline constexpr const char* outputDrive   = "output.drive.db";
 inline constexpr const char* master        = "output.master.db";
+// v0.15: the PRESET's level trim, summed with master. Not on any CC — master
+// follows CC 7, which sapptune restates every section, so a level stored in
+// master never survived the first bar on the station.
+inline constexpr const char* presetTrim    = "output.trim.db";
 inline constexpr const char* quality       = "quality.mode";
 
 } // namespace sappsynth::param

@@ -6,10 +6,11 @@
     python3 scripts/level_presets.py trims.txt          # report only
     python3 scripts/level_presets.py trims.txt --write  # rewrite the bank
 
-Each preset carries an `output.master.db` trim so it peaks at the target when
-played. The audit reports `name|measured peak dB|master dB it rendered with`,
-so the new trim is simply master + (target - peak), clamped to the parameter
-range. Presets that hit a clamp are listed: they cannot reach the target and
+Each preset carries an `output.trim.db` trim (v0.15; it was `output.master.db`
+until CC 7 — which every station song restates — was found to overwrite it) so
+it peaks at the target when played. The audit reports `name|measured peak
+dB|trim dB it rendered with`, so the new trim is simply trim + (target -
+peak), clamped to the parameter range. Presets that hit a clamp are listed: they cannot reach the target and
 need their patch changed, not their trim.
 
 Run the audit again afterwards — one pass is not exact, because the engine's
@@ -20,7 +21,7 @@ import sys
 from pathlib import Path
 
 TARGET_DB = -6.0
-MASTER_MIN, MASTER_MAX = -60.0, 6.0
+MASTER_MIN, MASTER_MAX = -48.0, 24.0   # output.trim.db's range
 BANK = Path(__file__).resolve().parent.parent / "source/plugin/FactoryPresets.cpp"
 
 
@@ -53,7 +54,7 @@ def main() -> int:
         if abs(new - master) < 0.05:
             continue
 
-        # Rewrite the p::master entry inside this preset's block only. The block
+        # Rewrite the p::presetTrim entry inside this preset's block only. The block
         # runs from its name to the start of the next preset (or end of bank),
         # which is unambiguous where brace counting is not.
         anchor = source.find(f'{{ "{name}",')
@@ -63,10 +64,10 @@ def main() -> int:
         nxt = re.search(r'\n\s*\{ "', source[anchor + 1:])
         end = anchor + 1 + nxt.start() if nxt else len(source)
         block = source[anchor:end]
-        patched, hits = re.subn(r"\{\s*p::master,\s*-?[0-9.]+f?\s*\}",
-                                f"{{ p::master, {new}f }}", block)
+        patched, hits = re.subn(r"\{\s*p::presetTrim,\s*-?[0-9.]+f?\s*\}",
+                                f"{{ p::presetTrim, {new}f }}", block)
         if hits != 1:
-            print(f"  ! {name}: {hits} master entries, expected 1")
+            print(f"  ! {name}: {hits} presetTrim entries, expected 1")
             continue
         source = source[:anchor] + patched + source[end:]
         changed += 1

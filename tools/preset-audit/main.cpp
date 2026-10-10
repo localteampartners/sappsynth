@@ -192,11 +192,12 @@ int main (int argc, char** argv)
 
         if (trimsOnly)
         {
-            // name | measured peak | the master this preset rendered with, so
-            // the calibration can compute an absolute new master value.
-            const float master =
-                processor.apvts.getRawParameterValue (sappsynth::param::master)->load();
-            std::printf ("%s|%.2f|%.2f\n", bank[i].name, peakDb, master);
+            // name | measured peak | the preset trim it rendered with, so the
+            // calibration can compute an absolute new trim (v0.15: the level
+            // lives in output.trim.db; master is the CC 7 fader).
+            const float trim =
+                processor.apvts.getRawParameterValue (sappsynth::param::presetTrim)->load();
+            std::printf ("%s|%.2f|%.2f\n", bank[i].name, peakDb, trim);
         }
         else
         {

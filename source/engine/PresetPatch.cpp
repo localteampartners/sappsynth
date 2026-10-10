@@ -113,6 +113,7 @@ bool applyPresetValues(PatchState& patch, const std::vector<presets::Value>& val
 
         else if (same(id, p::outputDrive)) patch.outputDriveDb = v;
         else if (same(id, p::master))      patch.masterDb = v;
+        else if (same(id, p::presetTrim))  patch.trimDb = v;
         else if (same(id, p::quality))     patch.quality = static_cast<QualityMode>(index);
 
         else return false;
@@ -171,7 +172,7 @@ const char* firstPatchDifference(const PatchState& a, const PatchState& b)
     SAPP_DIFF_F(driftSpeed) SAPP_DIFF_F(warmupAmount)
     SAPP_DIFF_F(dnaCondition) SAPP_DIFF_F(dnaCalibration) SAPP_DIFF_F(dnaWarmth)
     SAPP_DIFF_F(dnaSupply) SAPP_DIFF_F(dnaAge)
-    SAPP_DIFF_F(outputDriveDb) SAPP_DIFF_F(masterDb) SAPP_DIFF_X(quality)
+    SAPP_DIFF_F(outputDriveDb) SAPP_DIFF_F(masterDb) SAPP_DIFF_F(trimDb) SAPP_DIFF_X(quality)
 #undef SAPP_DIFF_F
 #undef SAPP_DIFF_X
     return nullptr;

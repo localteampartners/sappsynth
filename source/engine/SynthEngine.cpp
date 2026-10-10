@@ -40,7 +40,7 @@ void SynthEngine::prepare(double sampleRate, int maxBlockSize)
     smCutoff.reset(patch_.cutoffHz);
     smResonance.reset(patch_.resonance);
     smMixerDrive.reset(patch_.mixerDrive);
-    smMaster.reset(dbToGain(patch_.masterDb));
+    smMaster.reset(dbToGain(patch_.masterDb + patch_.trimDb));
 
     activeQuality = patch_.quality;
     voiceManager.applyQuality(ProcessingQuality::forMode(activeQuality));
@@ -405,7 +405,7 @@ void SynthEngine::process(const RenderBlock& block)
     // Ceiling, then Master with the bus makeup folded in. The knee bounds what
     // reaches the fader at full scale; on a levelled patch the bus is 20 dB
     // below it and nothing is applied.
-    smMaster.setTarget(dbToGain(patch_.masterDb));
+    smMaster.setTarget(dbToGain(patch_.masterDb + patch_.trimDb));
     for (int i = 0; i < block.numSamples; ++i)
     {
         const float master = smMaster.next() * kBusMakeup;

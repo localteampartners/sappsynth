@@ -6,6 +6,27 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-10-10 — 0.15.0: the bank's levelling survives the song
+
+Riff Fuzz Lead rendered 13.6 dB under the station's lead target, yet the
+audit shows it as the LOUDEST lead in the bank in isolation (−12.8 dB RMS at
+the −6 dBFS peak). The levelling lived in `output.master.db`, and SappLink
+CC 7 is mapped to that same parameter. sapptune restates CC 7 (the mix
+level) at every section, so in every station song each preset's measured
+trim (−16.5 … +2.4 dB) was replaced by the fader value.
+
+- **`output.trim.db`** ("Preset Trim", appended last, −48..+24 dB, on no
+  CC): the preset's level, summed with Master in the engine. All 212 factory
+  values moved there (trim = old master + 6, master back to its −6 default),
+  so every preset measures as before in isolation (`preset-audit` re-run:
+  210 of 212 peaks within 0.05 dB of their 0.14 value, Square Lead and Pluck
+  & Bloom within 0.25 dB from rounding). In a song, CC 7 is now a fader on top of the
+  preset's own level.
+- `preset-audit --trims` reports the trim; `scripts/level_presets.py`
+  rewrites `p::presetTrim`. User presets keep their saved master and a 0 trim.
+- Station: bump the balance-cache salt — every SappSynth chain's level in a
+  song moves by its preset's trim.
+
 ## 2026-10-10 — 0.14.0: pitch bend, cleaner rock leads, and the audit's fixes
 
 From Michael's first station listening ("midnight highway had a bad lead with

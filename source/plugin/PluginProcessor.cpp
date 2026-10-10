@@ -367,6 +367,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     layout.add(std::make_unique<Pc>(ID{sapp::userpresets::kPresetParamId, 1}, "Preset",
                                     presetChoices, 0));
 
+    // v0.15: the preset's level trim (FactoryPresets.cpp, levelled by
+    // scripts/level_presets.py). Summed with Master; NOT on any CC — Master
+    // follows CC 7 and every station song restates it, which used to throw
+    // the whole bank's levelling away. ADDED LAST: no parameter index moves.
+    layout.add(std::make_unique<P>(ID{p::presetTrim, 1}, "Preset Trim",
+                                   juce::NormalisableRange<float>(-48.0f, 24.0f, 0.1f), 0.0f));
+
     return layout;
 }
 
@@ -459,6 +466,7 @@ PatchState SappSynthProcessor::buildPatchFromParameters()
 
     patch.outputDriveDb = value(p::outputDrive);
     patch.masterDb = value(p::master);
+    patch.trimDb = value(p::presetTrim);
     patch.quality = static_cast<QualityMode>(choice(p::quality));
     return patch;
 }

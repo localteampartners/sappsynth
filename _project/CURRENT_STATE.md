@@ -2,6 +2,8 @@
 
 <!-- UPDATE WHEN: a feature ships, a deploy happens, something breaks, or something gets fixed. This file answers "what's the project like *right now*?" -->
 
+**2026-10-10: v0.15.0** — each preset's levelled trim lives in `output.trim.db` (no CC); `output.master.db` is the CC 7 fader. Before this, CC 7 replaced every preset's levelling in every song. `level_presets.py` writes `p::presetTrim`.
+
 **Last verified:** 2026-10-09 (v0.12.0 on master: in-voice supersaw unison, FDN hall, tempo sync, CC 3 clean, bank re-levelled — nothing listened to; see `_project/CHANGELOG.md`)
 re-levelled, 68 tests green, auval PASS)
 
