@@ -109,3 +109,11 @@ Full setup, including the per-repo registration steps:
   --target preset-audit`, then `preset-audit --trims | python3
   scripts/level_presets.py - --write`, two passes, after ANY engine change
   that moves levels (see `_project/CHANGELOG.md`).
+
+## 0.13 — modulation and the HERO bank
+
+- `lfo.toPw` (CC 9), `osc.sync`, mod wheel vibrato (CC 1), aftertouch →
+  cutoff.
+- 24 HERO presets at programs 188-211 (see `_project/CHANGELOG.md` for the
+  list). Select by name through the `preset` parameter — program changes
+  cannot reach past 127.

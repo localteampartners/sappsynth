@@ -6,6 +6,32 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-10-09 — 0.13.0: modulation round and the HERO bank
+
+Same day as 0.12. Plan E3 (rest) and E4. Nothing listened to.
+
+- **Modulation.** `lfo.toPw` (LFO → pulse width: the string machine finally
+  has PWM; SappLink CC 9), `osc.sync` (hard sync — osc2 resets osc1, the
+  tearing lead; naive at the sync point, softened by the 2x island), the
+  mod wheel (CC 1) adds up to 40 cents of vibrato on top of the patch's
+  LFO → pitch, channel / poly aftertouch opens the filter up to 1.5
+  octaves. Still open: per-voice LFO, a second LFO, env → pitch / FM, a
+  mod matrix, HP / BP filter modes.
+- **24 HERO presets, programs 188-211**, authored against reference
+  records on the new engine (unison inside the voice, the hall, synced
+  delay, LFO>PW, sync): Midnight City Pad, Saltwater Pluck, Offshore Pad,
+  Chicane Lead, Juno Arp, Prophet Brass, PWM String Machine, Tine Glass EP,
+  DX Bell, 303 Acid, Deep Garage Chord, Sync Tear Lead, Hoover Stack, Sub
+  Pressure, Anthem Pluck, Glacier Drone, Synthwave Bass, 80s Brass Stack,
+  Ibiza Stab, Rising Sweep, Polysix Strings II, Wurli Drive EP, Night Drive
+  Lead, Cathedral Choir Pad. Appended at the END of the bank; the 186
+  legacy patches keep their program numbers. Levelled by `preset-audit`
+  (two passes) to -6 dBFS on the eight-note chord. sapptune's styles pick
+  six of them by name (deep-space-drift, skyline-ascent, warehouse-lights,
+  rave-cathedral).
+- The plugin UI shows none of the 0.12-0.13 parameters yet (hall, sync
+  choices, LFO>PW, Osc Sync); they are host-automatable and preset-stored.
+
 ## 2026-10-09 — 0.12.0: a real supersaw, and a hall
 
 Michael, on the station: *"the instruments sound like they are on a middle

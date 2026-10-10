@@ -41,6 +41,7 @@ const std::array<CCMapping, kNumMappings>& mappings()
         { 18, p::reverbDamping, 0.0f,     1.0f,     Curve::Linear },
         { 19, p::reverbMod,     0.0f,     1.0f,     Curve::Linear },
         { 20, p::reverbHiCut,   1000.0f,  20000.0f, Curve::Log },
+        { 9,  p::lfoToPw,       0.0f,     1.0f,     Curve::Linear },   // v0.13
     } };
     return table;
 }

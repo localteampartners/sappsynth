@@ -309,7 +309,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     const juce::StringArray syncNames { "Free", "1/1", "1/2", "1/4", "1/8", "1/16", "1/4T", "1/8T", "1/4D", "1/8D" };
     layout.add(std::make_unique<Pc>(ID{p::lfoSync, 1}, "LFO Sync", syncNames, 0));
     layout.add(std::make_unique<P>(ID{p::lfoToPw, 1}, "LFO>PW", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
-    layout.add(std::make_unique<juce::AudioParameterBool>(ID{p::oscSync, 1}, "Osc Sync", false));
+    layout.add(std::make_unique<Pi>(ID{p::oscSync, 1}, "Osc Sync", 0, 1, 0));
     layout.add(std::make_unique<Pc>(ID{p::arpSync, 1}, "Arp Sync", syncNames, 0));
     layout.add(std::make_unique<Pc>(ID{p::delaySync, 1}, "Delay Sync", syncNames, 0));
     layout.add(std::make_unique<P>(ID{p::arpGate, 1}, "Arp Gate",
@@ -429,7 +429,7 @@ PatchState SappSynthProcessor::buildPatchFromParameters()
     patch.arpGate = value(p::arpGate);
     patch.lfoSync = choice(p::lfoSync);
     patch.lfoToPw = value(p::lfoToPw);
-    patch.oscSync = value(p::oscSync) >= 0.5f;
+    patch.oscSync = choice(p::oscSync) >= 1;
     patch.arpSync = choice(p::arpSync);
     patch.delaySync = choice(p::delaySync);
 

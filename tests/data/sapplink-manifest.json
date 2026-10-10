@@ -398,6 +398,21 @@
         "air",
         "darkness"
       ]
+    },
+    {
+      "id": "lfo.toPw",
+      "label": "LFO>PW",
+      "cc": 9,
+      "range": [
+        0,
+        1
+      ],
+      "curve": "linear",
+      "tags": [
+        "movement",
+        "pwm",
+        "width"
+      ]
     }
   ],
   "hostParameters": [
@@ -1349,6 +1364,102 @@
     {
       "program": 187,
       "name": "Chrome Solo"
+    },
+    {
+      "program": 188,
+      "name": "Midnight City Pad"
+    },
+    {
+      "program": 189,
+      "name": "Saltwater Pluck"
+    },
+    {
+      "program": 190,
+      "name": "Offshore Pad"
+    },
+    {
+      "program": 191,
+      "name": "Chicane Lead"
+    },
+    {
+      "program": 192,
+      "name": "Juno Arp"
+    },
+    {
+      "program": 193,
+      "name": "Prophet Brass"
+    },
+    {
+      "program": 194,
+      "name": "PWM String Machine"
+    },
+    {
+      "program": 195,
+      "name": "Tine Glass EP"
+    },
+    {
+      "program": 196,
+      "name": "DX Bell"
+    },
+    {
+      "program": 197,
+      "name": "303 Acid"
+    },
+    {
+      "program": 198,
+      "name": "Deep Garage Chord"
+    },
+    {
+      "program": 199,
+      "name": "Sync Tear Lead"
+    },
+    {
+      "program": 200,
+      "name": "Hoover Stack"
+    },
+    {
+      "program": 201,
+      "name": "Sub Pressure"
+    },
+    {
+      "program": 202,
+      "name": "Anthem Pluck"
+    },
+    {
+      "program": 203,
+      "name": "Glacier Drone"
+    },
+    {
+      "program": 204,
+      "name": "Synthwave Bass"
+    },
+    {
+      "program": 205,
+      "name": "80s Brass Stack"
+    },
+    {
+      "program": 206,
+      "name": "Ibiza Stab"
+    },
+    {
+      "program": 207,
+      "name": "Rising Sweep"
+    },
+    {
+      "program": 208,
+      "name": "Polysix Strings II"
+    },
+    {
+      "program": 209,
+      "name": "Wurli Drive EP"
+    },
+    {
+      "program": 210,
+      "name": "Night Drive Lead"
+    },
+    {
+      "program": 211,
+      "name": "Cathedral Choir Pad"
     }
   ],
   "articulations": []
