@@ -40,3 +40,4 @@ pids/
 build-core/
 .venv-assets/
 build-audit/
+build-asan/

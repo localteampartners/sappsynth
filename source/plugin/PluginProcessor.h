@@ -1,4 +1,5 @@
 #pragma once
+#include "SappLinkCCMap.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <array>
@@ -111,7 +112,11 @@ private:
         float current { 0.0f };
         bool active { false };
     };
-    std::array<CcSlew, 20> ccSlews;
+    // Sized from the SappLink table, never a literal: v0.12/v0.13 grew the
+    // table to 28 rows while this stayed at 20, and the constructor's fill
+    // loop wrote eight slews past the array on every instantiation — heap
+    // corruption that surfaced as a crash after the state dump (issue #3).
+    std::array<CcSlew, static_cast<std::size_t>(sapplink::kNumMappings)> ccSlews;
     void handleSappLinkCc(int ccNumber, int ccValue);
     void advanceCcSlews(int numSamples, double sampleRate);
 

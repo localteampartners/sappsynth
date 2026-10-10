@@ -6,6 +6,34 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-10-10 — 0.13.1: two memory bugs that crashed the Windows host (issue #3)
+
+Found on the station box by Michael: every SappSynth ≥ 0.12 chain crashed
+`sappradio.exe` (segfault after the state dump, STATUS_HEAP_CORRUPTION in
+renders); 0.11.0 was clean. Two real bugs, both from the 0.12/0.13 work:
+
+- **`ccSlews` was `std::array<CcSlew, 20>` while the SappLink table grew to
+  28 rows.** The constructor's fill loop wrote eight slews past the array on
+  every instantiation — heap corruption that surfaced wherever the next
+  free or allocation happened. The array is now sized from
+  `sapplink::kNumMappings` with a `static_assert`, the way the other
+  plugins already did it.
+- **The hall read one sample past a delay line.** `HallReverb::process`
+  computed the read position as `float(writePos) - delay`, wrapped a
+  negative result by adding the line length, and cast to int: in float,
+  (size - 1e-5) rounds to exactly `size`. AddressSanitizer caught it in
+  the existing "Hall: full wet" test at size 0.5. Positions are now double,
+  wrapped on both sides, and the index is clamped; the predelay read got
+  the same treatment. The same code was in sappkit's plate (0.9.2) and
+  sapporchestra's hall (0.10.2), fixed in the same way.
+
+Verification: core tests under `-fsanitize=address,undefined` (73 cases,
+clean), the plugin sources compiled on the mac, the Windows release build.
+Recipe for next time: `cmake -B build-asan -DSAPPSYNTH_BUILD_PLUGIN=OFF
+-DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined
+-fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"`
+then `ASAN_OPTIONS=detect_leaks=0 ./build-asan/sappsynth_tests`.
+
 ## 2026-10-09 — 0.13.0: modulation round and the HERO bank
 
 Same day as 0.12. Plan E3 (rest) and E4. Nothing listened to.

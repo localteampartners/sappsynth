@@ -71,11 +71,16 @@ public:
             // predelay on the mono send
             const float send = 0.5f * (left[i] + right[i]);
             predelayLine[static_cast<std::size_t>(predelayWrite)] = send;
-            float rp = static_cast<float>(predelayWrite) - predelaySamples;
+            // Read positions are computed in double and wrapped on BOTH sides,
+            // then the integer index is clamped: in float, (size - 1e-5)
+            // rounds to exactly `size` and the read lands one past the
+            // buffer — the heap overflow AddressSanitizer caught (issue #3).
             const int psz = static_cast<int>(predelayLine.size());
-            while (rp < 0.0f) rp += static_cast<float>(psz);
-            const int p0 = static_cast<int>(rp);
-            const float pf = rp - static_cast<float>(p0);
+            double rp = static_cast<double>(predelayWrite) - static_cast<double>(predelaySamples);
+            while (rp < 0.0) rp += psz;
+            while (rp >= psz) rp -= psz;
+            const int p0 = std::min(psz - 1, std::max(0, static_cast<int>(rp)));
+            const float pf = static_cast<float>(rp - p0);
             const int p1 = p0 + 1 >= psz ? 0 : p0 + 1;
             const float delayed = predelayLine[static_cast<std::size_t>(p0)] * (1.0f - pf)
                                 + predelayLine[static_cast<std::size_t>(p1)] * pf;
@@ -91,10 +96,11 @@ public:
                 const float delay = delaySamples[l] + std::sin(lfoPhase[l]) * modSamples;
                 auto& line = lines[static_cast<std::size_t>(l)];
                 const int size = static_cast<int>(line.size());
-                float pos = static_cast<float>(writePos[l]) - delay;
-                while (pos < 0.0f) pos += static_cast<float>(size);
-                const int i0 = static_cast<int>(pos);
-                const float frac = pos - static_cast<float>(i0);
+                double pos = static_cast<double>(writePos[l]) - static_cast<double>(delay);
+                while (pos < 0.0) pos += size;
+                while (pos >= size) pos -= size;
+                const int i0 = std::min(size - 1, std::max(0, static_cast<int>(pos)));
+                const float frac = static_cast<float>(pos - i0);
                 const int i1 = i0 + 1 >= size ? 0 : i0 + 1;
                 read[l] = line[static_cast<std::size_t>(i0)] * (1.0f - frac) + line[static_cast<std::size_t>(i1)] * frac;
                 sum += read[l];

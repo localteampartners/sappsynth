@@ -32,6 +32,8 @@ SappSynthProcessor::SappSynthProcessor()
     engine.setUnitSeed(0x5A995EEDull);
 
     const auto& table = sapplink::mappings();
+    static_assert(std::tuple_size<decltype(ccSlews)>::value == static_cast<std::size_t>(sapplink::kNumMappings),
+                  "ccSlews must match the SappLink mapping table size");
     for (std::size_t i = 0; i < table.size(); ++i)
         ccSlews[i].parameter = apvts.getParameter(table[i].paramId);
 
