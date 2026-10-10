@@ -39,3 +39,4 @@ pids/
 .sappbackup/snapshots/ # local backup metadata, if any
 build-core/
 .venv-assets/
+build-audit/
