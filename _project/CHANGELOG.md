@@ -6,6 +6,23 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-08-11 — User presets stop capturing status readouts
+
+- `sapp::userpresets::capture()` now also skips `!isAutomatable()` parameters.
+  It snapshotted every `AudioProcessorParameterWithID` except `preset`, which
+  would sweep in any non-automatable status readout (e.g. sappkit's
+  `libraryReady`, added outside the APVTS) — inert on load, but not part of a
+  sound.
+- No behaviour change here yet: sappsynth has no non-automatable parameter, so
+  captured preset contents and the round-trip parameter count are unchanged.
+  This keeps the shared file identical ahead of the need.
+- **Shared-file note.** `UserPresets.{h,cpp}` is byte-identical across
+  sappsynth / sappkeys / sappkit. sappkeys already shipped this fix in its
+  v0.8.0 (`e47452c`); sappsynth and sappkit had drifted behind. All three
+  `.cpp` and `.h` files are md5-identical again.
+
+---
+
 ## 2026-08-10 — 0.11.0
 
 **This release changes the sound.** Four hidden gain stages (issue #2) are gone,
