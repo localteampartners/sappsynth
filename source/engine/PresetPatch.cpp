@@ -86,6 +86,8 @@ bool applyPresetValues(PatchState& patch, const std::vector<presets::Value>& val
         else if (same(id, p::lfoSync))     patch.lfoSync = index;
         else if (same(id, p::arpSync))     patch.arpSync = index;
         else if (same(id, p::delaySync))   patch.delaySync = index;
+        else if (same(id, p::lfoToPw))     patch.lfoToPw = v;
+        else if (same(id, p::oscSync))     patch.oscSync = v >= 0.5f;
 
         else if (same(id, p::chorusMix))   patch.chorusMix = v;
         else if (same(id, p::chorusRate))  patch.chorusRateHz = v;
@@ -158,6 +160,7 @@ const char* firstPatchDifference(const PatchState& a, const PatchState& b)
     SAPP_DIFF_X(polyphony)
     SAPP_DIFF_X(arpMode) SAPP_DIFF_F(arpRateHz) SAPP_DIFF_X(arpOctaves) SAPP_DIFF_F(arpGate)
     SAPP_DIFF_X(lfoSync) SAPP_DIFF_X(arpSync) SAPP_DIFF_X(delaySync)
+    SAPP_DIFF_F(lfoToPw) SAPP_DIFF_X(oscSync)
     SAPP_DIFF_X(unisonCount) SAPP_DIFF_F(unisonDetuneCents)
     SAPP_DIFF_F(unisonSpread) SAPP_DIFF_F(glideSeconds)
     SAPP_DIFF_F(chorusMix) SAPP_DIFF_F(chorusRateHz)

@@ -47,6 +47,10 @@ struct PatchState
     float filterAttack { 0.005f }, filterDecay { 0.25f }, filterSustain { 0.3f }, filterRelease { 0.25f };
 
     float lfoRateHz { 1.5f };
+    // v0.13 modulation (plan E3): LFO -> pulse width (0..1 of the width),
+    // hard sync (osc2 resets osc1's phase: the classic tearing lead).
+    float lfoToPw { 0.0f };
+    bool oscSync { false };
     LfoShape lfoShape { LfoShape::Sine };
     float lfoToPitchCents { 0.0f };   // 0..100
     float lfoToCutoff { 0.0f };       // 0..1 -> +-3 octaves

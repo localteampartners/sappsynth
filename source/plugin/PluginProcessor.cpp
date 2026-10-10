@@ -308,6 +308,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     layout.add(std::make_unique<Pi>(ID{p::arpOctaves, 1}, "Arp Octaves", 1, 3, 1));
     const juce::StringArray syncNames { "Free", "1/1", "1/2", "1/4", "1/8", "1/16", "1/4T", "1/8T", "1/4D", "1/8D" };
     layout.add(std::make_unique<Pc>(ID{p::lfoSync, 1}, "LFO Sync", syncNames, 0));
+    layout.add(std::make_unique<P>(ID{p::lfoToPw, 1}, "LFO>PW", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
+    layout.add(std::make_unique<juce::AudioParameterBool>(ID{p::oscSync, 1}, "Osc Sync", false));
     layout.add(std::make_unique<Pc>(ID{p::arpSync, 1}, "Arp Sync", syncNames, 0));
     layout.add(std::make_unique<Pc>(ID{p::delaySync, 1}, "Delay Sync", syncNames, 0));
     layout.add(std::make_unique<P>(ID{p::arpGate, 1}, "Arp Gate",
@@ -426,6 +428,8 @@ PatchState SappSynthProcessor::buildPatchFromParameters()
     patch.arpOctaves = choice(p::arpOctaves);
     patch.arpGate = value(p::arpGate);
     patch.lfoSync = choice(p::lfoSync);
+    patch.lfoToPw = value(p::lfoToPw);
+    patch.oscSync = value(p::oscSync) >= 0.5f;
     patch.arpSync = choice(p::arpSync);
     patch.delaySync = choice(p::delaySync);
 
@@ -504,9 +508,19 @@ void SappSynthProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         }
         else if (message.isController())
         {
-            // SappLink CC-in (any channel). CC 1/64 and pitch bend fall
-            // through untouched — they are not part of the mapping.
-            handleSappLinkCc(message.getControllerNumber(), message.getControllerValue());
+            // CC 1 is the mod wheel (v0.13: vibrato); CC 64 and pitch bend
+            // fall through untouched. Everything else is SappLink CC-in.
+            if (message.getControllerNumber() == 1)
+                engine.setModWheel(static_cast<float>(message.getControllerValue()) / 127.0f);
+            else
+                handleSappLinkCc(message.getControllerNumber(), message.getControllerValue());
+            continue;
+        }
+        else if (message.isChannelPressure() || message.isAftertouch())
+        {
+            engine.setAftertouch(static_cast<float>(message.isChannelPressure()
+                                                    ? message.getChannelPressureValue()
+                                                    : message.getAfterTouchValue()) / 127.0f);
             continue;
         }
         else if (message.isProgramChange())

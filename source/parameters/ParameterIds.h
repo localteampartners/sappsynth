@@ -75,6 +75,8 @@ inline constexpr const char* reverbHiCut   = "fx.reverb.hicut.hz";
 inline constexpr const char* lfoSync       = "lfo.sync";
 inline constexpr const char* arpSync       = "arp.sync";
 inline constexpr const char* delaySync     = "fx.delay.sync";
+inline constexpr const char* lfoToPw       = "lfo.toPw";
+inline constexpr const char* oscSync       = "osc.sync";
 
 inline constexpr const char* character     = "variation.amount";
 inline constexpr const char* dnaCondition  = "dna.condition";

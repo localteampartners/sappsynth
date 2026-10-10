@@ -53,6 +53,9 @@ public:
     }
 
     double phaseIncrement() const noexcept { return increment; }
+    double currentPhase() const noexcept { return osc.currentPhase(); }
+    /** Hard sync: restart the cycle, keeping the sub-sample fraction. */
+    void syncTo(double phase01) noexcept { osc.reset(phase01); }
 
 private:
     BandLimitedOscillator osc;

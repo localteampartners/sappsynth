@@ -225,3 +225,54 @@ TEST_CASE("CC 3 clean scales the imperfection sources to the patch's own clean r
     INFO("clean-vs-designed " << diffClean << " dirty-vs-designed " << diffDirty);
     REQUIRE(diffClean < diffDirty * 0.05);
 }
+
+TEST_CASE("v0.13 modulation: LFO>PW moves a pulse, sync tears, the wheel adds vibrato, pressure opens the filter")
+{
+    auto render = [](auto&& tweak, float wheel = 0.0f, float pressure = 0.0f)
+    {
+        PatchState patch = basicPatch();
+        patch.osc1.waveform = Waveform::Pulse;
+        patch.osc1.pulseWidth = 0.5f;
+        patch.characterAmount = 0.0f;
+        patch.driftAmountCents = 0.0f;
+        patch.cutoffHz = 1500.0f;
+        patch.filterEnvAmount = 0.0f;    // the filter sits where cutoff says, so pressure is measurable
+        patch.lfoRateHz = 6.0f;
+        tweak(patch);
+        SynthEngine engine;
+        engine.setUnitSeed(4);
+        engine.setPatch(patch);
+        engine.prepare(48000.0, 256);
+        engine.setModWheel(wheel);
+        engine.setAftertouch(pressure);
+        return OfflineRenderer::renderSingleNote(engine, 57, 0.8f, 0.8, 0.9);
+    };
+    auto diff = [](const auto& a, const auto& b) { double d = 0; for (std::size_t i = 0; i < a.left.size(); ++i) d += std::abs(double(a.left[i]) - double(b.left[i])); return d; };
+    const auto base = render([](PatchState&) {});
+    const auto pwm = render([](PatchState& p) { p.lfoToPw = 0.8f; });
+    const auto sync = render([](PatchState& p) { p.oscSync = true; p.osc2.semitones = 7; p.osc2.level = 0.0f; });
+    const auto wheel = render([](PatchState&) {}, 1.0f);
+    const auto pressed = render([](PatchState&) {}, 0.0f, 1.0f);
+    REQUIRE(diff(pwm, base) > 1.0);
+    REQUIRE(diff(sync, base) > 1.0);
+    REQUIRE(diff(wheel, base) > 1.0);
+    // pressure opens the filter: more energy above ~3 kHz. Four cascaded
+    // one-pole high-passes (24 dB/oct) so the 220 Hz fundamental cannot leak
+    // into the measurement and mask the change.
+    auto highBand = [](const std::vector<float>& x)
+    {
+        const float coef = 1.0f - std::exp(-2.0f * 3.14159f * 3000.0f / 48000.0f);
+        float lp[4] { 0, 0, 0, 0 };
+        double acc = 0.0;
+        for (std::size_t i = 12000; i < x.size(); ++i)
+        {
+            float v = x[i];
+            for (float& st : lp) { st += coef * (v - st); v -= st; }
+            acc += std::abs(v);
+        }
+        return acc;
+    };
+    const double hfBase = highBand(base.left), hfPressed = highBand(pressed.left);
+    INFO("high band base " << hfBase << " pressed " << hfPressed);
+    REQUIRE(hfPressed > hfBase * 1.5);
+}

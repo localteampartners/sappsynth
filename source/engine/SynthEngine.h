@@ -67,6 +67,10 @@ public:
         applyClean(effectivePatch_);
     }
     float clean() const noexcept { return clean_; }
+    /** Mod wheel (CC 1) 0..1: adds up to 40 cents of LFO vibrato (v0.13). */
+    void setModWheel(float amount01) noexcept { modWheel_ = std::clamp(amount01, 0.0f, 1.0f); }
+    /** Channel / poly aftertouch 0..1: opens the filter up to 1.5 octaves (v0.13). */
+    void setAftertouch(float amount01) noexcept { aftertouch_ = std::clamp(amount01, 0.0f, 1.0f); }
     /** Host tempo for the sync choices (engine/TempoSync.h). Default 120. */
     void setHostTempo(double bpm) noexcept { hostBpm_ = bpm > 20.0 ? bpm : hostBpm_; }
     double hostTempo() const noexcept { return hostBpm_; }
@@ -145,6 +149,8 @@ private:
     double sr { 48000.0 };
     double hostBpm_ { 120.0 };
     float clean_ { 0.0f };
+    float modWheel_ { 0.0f };
+    float aftertouch_ { 0.0f };
     /** CC 3: every imperfection source scaled by (1 - clean), together. */
     void applyClean(PatchState& p) const noexcept
     {

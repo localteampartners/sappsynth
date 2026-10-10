@@ -177,7 +177,7 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
             glideOffsetSemis = 0.0f;
     }
 
-    const float pitchMods = mod.lfoValue * patch.lfoToPitchCents / 100.0f
+    const float pitchMods = mod.lfoValue * (patch.lfoToPitchCents + mod.wheelVibratoCents) / 100.0f
                           + scaledOffset(unit.masterTuneCents, calib) / 100.0f
                           + scaledOffset(noteVar_.pitchStartCents, character) / 100.0f
                           + (mod.warmupCents + mod.supplyPitchCents) / 100.0f
@@ -216,15 +216,17 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
     const float calibrationCents = scaledOffset(unit.filterCutoffCents + profile_.filterCutoffCents, calib);
     const float keyOffsetOct = patch.keyTrack * static_cast<float>(note_ - 60) / 12.0f;
     const float staticOct = keyOffsetOct + velCut + mod.lfoValue * patch.lfoToCutoff * 3.0f
-                          + calibrationCents / 1200.0f + mod.supplyCutoffOct;
+                          + calibrationCents / 1200.0f + mod.supplyCutoffOct + mod.pressureOct;
     const float resonance = std::clamp(patch.resonance
                           + scaledOffset(unit.resonanceOffset + profile_.resonanceOffset, character),
                           0.0f, 1.1f);
     const float filterDrive = dbToGain(patch.filterDriveDb) * mod.supplyDrive;
     const float bleedAmp = profile_.vcaBleed * mod.bleedScale * 0.006f;
 
-    const float pwm = patch.osc1.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character);
-    const float pwm2 = patch.osc2.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character);
+    // LFO -> pulse width (v0.13): the PWM string machine finally has PWM
+    const float pwMod = mod.lfoValue * patch.lfoToPw * 0.42f;
+    const float pwm = patch.osc1.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character) + pwMod;
+    const float pwm2 = patch.osc2.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character) + pwMod;
 
     // Velocity into amplitude with a soft curve plus per-note tilt.
     const float velGain = (0.25f + 0.75f * velocity_ * velocity_)
@@ -239,7 +241,16 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
         cutoffBuf[static_cast<std::size_t>(i)] = patch.cutoffHz * std::exp2(totalOct);
 
         // Osc2 renders first so it can frequency-modulate osc1 this sample.
+        const double phase2Before = osc2.currentPhase();
         const float o2 = osc2.tick(pwm2);
+        // Hard sync (v0.13): when osc2 wraps, osc1 restarts its cycle at the
+        // fraction osc2 overshot by — the tearing lead. Naive (no BLEP at the
+        // sync point); the 2x oversampled island softens the edge.
+        if (patch.oscSync && osc2.currentPhase() < phase2Before)
+        {
+            const double over = osc2.currentPhase() / std::max(1e-9, osc2.phaseIncrement());
+            osc1.syncTo(std::clamp(over * osc1.phaseIncrement(), 0.0, 0.999));
+        }
         const float fmMult = 1.0f + patch.osc2ToOsc1Fm * 4.0f * o2;
         float o1 = osc1.tick(pwm, fmMult);
         if (uniExtras > 0)

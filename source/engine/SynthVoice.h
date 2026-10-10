@@ -39,6 +39,10 @@ struct SharedModulation
     float supplyPitchCents { 0.0f };// shared supply sag -> pitch
     float supplyCutoffOct { 0.0f }; // shared supply sag -> cutoff
     float supplyDrive { 1.0f };     // shared supply sag -> less headroom
+    // v0.13 performance controls (plan E3): the mod wheel adds vibrato on
+    // top of the patch's LFO->pitch, channel pressure opens the filter.
+    float wheelVibratoCents { 0.0f };
+    float pressureOct { 0.0f };
 };
 
 // One complete voice card (architecture §15): owns all audio-rate state, has a

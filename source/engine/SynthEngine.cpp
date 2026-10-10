@@ -218,6 +218,8 @@ void SynthEngine::processArp(int numSamples)
 void SynthEngine::updateControl(int numSamples)
 {
     sharedMod.lfoValue = lfo.process(numSamples);
+    sharedMod.wheelVibratoCents = modWheel_ * 40.0f;
+    sharedMod.pressureOct = aftertouch_ * 1.5f;
     sharedMod.unitDriftNorm = labDriftFrozen.load(std::memory_order_relaxed)
                             ? unitDrift.value() : unitDrift.process(numSamples);
     sharedMod.warmupCents = thermal.advance(numSamples) * effectivePatch_.warmupAmount;
