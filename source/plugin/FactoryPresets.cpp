@@ -45,6 +45,25 @@ const std::vector<Preset>& all()
             { p::unisonDetune, 10 }, { p::cutoff, 1800 }, { p::filterEnvAmt, 0.4f }, { p::filterVel, 0.5f },
             { p::ampDecay, 0.5f }, { p::delayMix, 0.2f }, { p::character, 0.6f },
             { p::master, -15.4f } } },
+        // v0.12 — the FUN SYNTH LEAD for sapptune's rock-solo vocabulary (no
+        // guitar, Michael's call): a fat mono lead that bends, glides and
+        // bites, meant to run through sappedal's amp. Mono, so the full-
+        // polyphony audit plays one voice of it.
+        { "Riff Fuzz Lead", "LEAD", { { p::osc2Level, 0.85f }, { p::osc2Fine, 9 }, { p::unisonCount, 3 },
+            { p::unisonDetune, 11 }, { p::unisonSpread, 0.8f }, { p::cutoff, 2400 }, { p::resonance, 0.22f },
+            { p::filterEnvAmt, 0.5f }, { p::filtDecay, 0.22f }, { p::filtSustain, 0.35f }, { p::filterVel, 0.7f },
+            { p::keyTrack, 0.5f }, { p::mixerDrive, 4.5f }, { p::filterDrive, 9 }, { p::ampAttack, 0.004f },
+            { p::ampRelease, 0.18f }, { p::polyphony, 1 }, { p::glide, 0.045f }, { p::lfoRate, 5.4f },
+            { p::lfoToPitch, 6 }, { p::delayMix, 0.22f }, { p::delayFeedback, 0.38f }, { p::delaySync, 9 },
+            { p::reverbMix, 0.18f }, { p::reverbSize, 0.45f }, { p::character, 0.7f },
+            { p::master, -12.0f } } },
+        { "Chrome Solo", "LEAD", { { p::osc1Wave, 2 }, { p::osc1Pw, 0.32f }, { p::osc2Level, 0.7f },
+            { p::osc2Semi, 12 }, { p::osc2Fine, -5 }, { p::unisonCount, 2 }, { p::unisonDetune, 7 },
+            { p::cutoff, 3600 }, { p::resonance, 0.3f }, { p::filterEnvAmt, 0.35f }, { p::filtDecay, 0.3f },
+            { p::filterVel, 0.6f }, { p::mixerDrive, 3 }, { p::ampAttack, 0.006f }, { p::ampRelease, 0.25f },
+            { p::polyphony, 1 }, { p::glide, 0.03f }, { p::delayMix, 0.3f }, { p::delayFeedback, 0.42f },
+            { p::delaySync, 4 }, { p::reverbMix, 0.25f }, { p::reverbSize, 0.6f }, { p::reverbPredelay, 30 },
+            { p::master, -12.0f } } },
         { "Hoover Rave", "LEAD", { { p::osc2Wave, 2 }, { p::osc2Pw, 0.4f }, { p::osc2Level, 0.9f },
             { p::unisonCount, 5 }, { p::unisonDetune, 35 }, { p::unisonSpread, 1 }, { p::cutoff, 3000 },
             { p::glide, 0.15f }, { p::chorusMix, 0.4f }, { p::ampAttack, 0.02f }, { p::character, 0.6f },
