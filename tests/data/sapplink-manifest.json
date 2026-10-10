@@ -1341,6 +1341,14 @@
     {
       "program": 185,
       "name": "Hard Dance Stab"
+    },
+    {
+      "program": 186,
+      "name": "Riff Fuzz Lead"
+    },
+    {
+      "program": 187,
+      "name": "Chrome Solo"
     }
   ],
   "articulations": []
