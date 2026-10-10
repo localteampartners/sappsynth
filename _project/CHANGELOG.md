@@ -6,6 +6,59 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-10-10 — 0.16.0: J-pop, J-rock, electro and resort banks; through-zero FM; RMS floor
+
+Michael asked for "amazing presets" against four references: Utada Hikaru
+("Colors", "Ultra Blue"), L'Arc~en~Ciel (synths only, no guitars), Perfume's
+"Polyrhythm" (Yasutaka Nakata), and Wii Sports Resort. 35 presets at
+programs 212-246, appended so no program number moves.
+
+- **JPOP (212-219)**: Ultra Glass EP, Prism Pad, Crystal Chime, Silk Sub
+  Bass, Airy Strings, Velvet Harp Pluck, Satin Square Lead, Starlight Bell Pad.
+- **JROCK (220-227)**: Arena Strings, Ballad Synth Piano, Skyward Lead,
+  Rainbow Brass, Night Rain Arp, Rock Drive Bass, Stadium Sync Lead, Crimson Pad.
+- **ELECTRO (228-236)**: Polyrhythm Arp, Triplet Glitter Arp (1/8T against a
+  straight beat), Gated Saw Stab (square LFO, 1/16, on the cutoff), Pump
+  Chords (saw LFO, 1/4: the filter dips on every beat), Robo Vox Lead, Vox
+  Choir Pad, Electro Punch Bass, Pixel Square Lead, Cut-Up Stab.
+- **RESORT (237-246)**: Island Marimba, Sunny Vibes (the cutoff sits on the
+  fundamental, so the 5 Hz cutoff LFO acts as the motor tremolo), Lagoon
+  Kalimba, Steel Pan Party, Breezy Pan Flute, Sunny Whistle, Pizzicato Pop,
+  Island Pluck, Sunny Brass, Tropical Glock.
+- **Through-zero FM.** `VCOModel::tick` used to clamp the FM multiplier
+  `1 + 4*fm*osc2` at zero, which rectified the modulation and made the
+  average pitch go SHARP whenever `osc2.fmToOsc1` > 0.25 (+109 cents at
+  0.35, +341 at 0.5, up to +461 on DX Bell at C4). A negative multiplier now
+  runs the phase backward (`PhaseAccumulator` wraps below 0; PolyBLEP uses
+  |increment|; the triangle integrator keeps the sign). Positive increments
+  are bit-identical, so only the 21 presets above 0.25 changed (render
+  fingerprints of all 247 compared). All 21 now read C4 at 261.6 Hz (0.0
+  cents) except Metal Drone, whose detuned 0.504:1 saw modulator is meant to
+  be inharmonic. FM Bells, Glass Clang, Gamelan Steps, FM Bass Slap, Tubular
+  Bell, Metal Pad and DX Bell have inharmonic ratios by design but now have
+  their carrier on the note. The v0.16 patches were written at fm <= 0.25,
+  so they did not change. New tests: a sine-on-sine patch at fm 0.7 must be
+  within 5 cents (the old clamp measures 65 cents off), and the phase
+  accumulator runs backward and wraps.
+- **RMS floor** (`level_presets.py --rms-floor`, `RMS_FLOOR` set). Peak
+  levelling left short stabs, plucks and mallets 7-21 dB under their category's
+  median RMS. These 40 presets are raised until their RMS is within 4 dB of the
+  median or their peak reaches -3.2 dBFS, whichever comes first: every one
+  over 6 dB under, plus Island Marimba, Pizzicato Pop and Island Pluck. Most
+  stop at the peak cap (+2.8 dB). Without the flag the script skips them, so
+  a plain re-level never pulls them back. `--only` re-levels just the named
+  presets. `preset-audit --trims` now prints `name|peak|trim|rms|category`.
+- Re-levelled with two `preset-audit` passes, only the 21 FM presets and the
+  40 RMS-floor presets (52 trims moved; every other trim is byte-identical).
+  0 presets above -3 dBFS. The 35 new presets peak at -6.0 dBFS (±0.1), apart
+  from the RMS-floor ones.
+- Station: bump the balance-cache salt. 52 presets' levels moved, and the 21
+  FM presets changed pitch and timbre.
+- sapptune manifest `presets` + the vendored `tests/data/sapplink-manifest.json`
+  gain rows 212-246; `engine/scripts/sync-manifests.mjs` re-run. (The
+  manifest's `hostParameters.preset.choices` list was already stale at 186
+  names, and this change leaves it alone.)
+
 ## 2026-10-10 — 0.15.0: the bank's levelling survives the song
 
 Riff Fuzz Lead rendered 13.6 dB under the station's lead target, yet the

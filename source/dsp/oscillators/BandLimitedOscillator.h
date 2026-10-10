@@ -26,9 +26,15 @@ public:
     void setWaveform(Waveform w) noexcept       { waveform = w; }
 
     // increment = frequency / sampleRate; pulseWidth in (0.05..0.95).
+    // A negative increment plays the cycle backward (through-zero FM). The
+    // PolyBLEP residual depends only on the phase distance to the edge, so it
+    // is the same in both directions given the increment's MAGNITUDE as the
+    // window; the triangle's integrator keeps the signed increment (its slope
+    // reverses with the phase).
     float tick(double increment, float pulseWidth = 0.5f) noexcept
     {
         const double t = phase.value();
+        const double dt = std::abs(increment);
         float out = 0.0f;
 
         switch (waveform)
@@ -40,11 +46,11 @@ public:
             case Waveform::Saw:
                 out = static_cast<float>(2.0 * t - 1.0);
                 if (method == OscillatorMethod::PolyBlep)
-                    out -= polyBlep(t, increment);
+                    out -= polyBlep(t, dt);
                 break;
 
             case Waveform::Pulse:
-                out = renderPulse(t, increment, pulseWidth);
+                out = renderPulse(t, dt, pulseWidth);
                 break;
 
             case Waveform::Triangle:
@@ -52,7 +58,7 @@ public:
                 // Leaky integration of a band-limited square: triangle slope is
                 // +-4/period, so gain = 4 * increment. Inherits the square's
                 // alias suppression; the leak stops DC accumulating.
-                const float square = renderPulse(t, increment, 0.5f);
+                const float square = renderPulse(t, dt, 0.5f);
                 triIntegrator = 0.9995f * triIntegrator
                               + static_cast<float>(4.0 * increment) * square;
                 out = triIntegrator;

@@ -105,10 +105,16 @@ Two things it has to get right, both learned the hard way (issue #1):
 To re-level after changing the bank or anything that affects level:
 
     ./build/preset-audit_artefacts/Release/preset-audit --trims > /tmp/trims.txt
-    python3 scripts/level_presets.py /tmp/trims.txt --write
+    python3 scripts/level_presets.py /tmp/trims.txt --rms-floor --write
     cmake --build build --target preset-audit   # then repeat until 0 changes
 
-Two or three rounds converge. `--trims` alone prints `name|peak|master`.
+Two or three rounds converge. `--trims` prints `name|peak|trim|rms|category`.
+`--only "A,B"` re-levels just those presets (use it when only some presets'
+sound changed). `--rms-floor` levels the short, spiky presets in the
+script's `RMS_FLOOR` set by a blend: louder than the -6 dBFS peak target until
+their RMS is within 4 dB of the category median or their peak reaches
+-3.2 dBFS. Without the flag those presets are skipped, never pulled back to the
+plain peak target.
 
 `preset-audit --defaults` checks that the JUCE-free `sappsynth::defaultPatch()`
 still matches the live APVTS defaults — the unit suite renders the bank through

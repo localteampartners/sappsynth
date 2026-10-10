@@ -306,3 +306,67 @@ TEST_CASE("v0.14 pitch bend: +2 semitones raises the pitch by a whole tone, smoo
     REQUIRE(before == Catch::Approx(220.0).margin(4.0));
     REQUIRE(after == Catch::Approx(246.94).margin(5.0));
 }
+
+namespace {
+// Strongest component within +-100 cents of `hz` (0.1-cent Hann DFT scan).
+double centsOffStrongestNear(const std::vector<float>& x, std::size_t start, std::size_t n, double hz, double sr)
+{
+    double bestMag = -1.0, bestCents = 0.0;
+    for (double c = -100.0; c <= 100.0; c += 0.1)
+    {
+        const double f = hz * std::exp2(c / 1200.0);
+        double re = 0.0, im = 0.0;
+        for (std::size_t s = 0; s < n; ++s)
+        {
+            const double w = 0.5 - 0.5 * std::cos(2.0 * 3.141592653589793 * static_cast<double>(s) / static_cast<double>(n - 1));
+            const double v = static_cast<double>(x[start + s]) * w;
+            const double ph = 2.0 * 3.141592653589793 * f * static_cast<double>(s) / sr;
+            re += v * std::cos(ph);
+            im -= v * std::sin(ph);
+        }
+        const double mag = re * re + im * im;
+        if (mag > bestMag) { bestMag = mag; bestCents = c; }
+    }
+    return bestCents;
+}
+} // namespace
+
+TEST_CASE("Through-zero FM keeps a deep FM patch on pitch (v0.16)")
+{
+    // Until 0.16 the FM multiplier (1 + 4*fm*osc2) was clamped at zero, which
+    // rectified the modulation and pulled the note sharp: +642 cents at 0.7 on
+    // DX Bell. A pure sine-on-sine patch at fm 0.7 must read the played note.
+    PatchState patch;
+    patch.osc1.waveform = Waveform::Sine;
+    patch.osc2 = { Waveform::Sine, 1, 0, 0.0f, 0.5f, 0.0f };   // 2:1 modulator, not in the mix
+    patch.osc2ToOsc1Fm = 0.7f;
+    patch.cutoffHz = 20000.0f;
+    patch.filterEnvAmount = 0.0f;
+    patch.characterAmount = 0.0f;
+    patch.driftAmountCents = 0.0f;
+    patch.ampSustain = 1.0f;
+
+    SynthEngine engine;
+    engine.setUnitSeed(1001);
+    engine.prepare(48000.0, 256);
+    engine.setPatch(patch);
+    const auto r = OfflineRenderer::renderSingleNote(engine, 60, 0.8f, 1.2, 1.3);
+    const double cents = centsOffStrongestNear(r.left, 9600, 24000, 261.6255653, 48000.0);
+    INFO("C4 measured " << cents << " cents off");
+    REQUIRE(std::abs(cents) < 5.0);
+}
+
+TEST_CASE("Phase accumulator runs backward and wraps below zero")
+{
+    PhaseAccumulator phase;
+    phase.reset(0.001);
+    int wraps = 0;
+    for (int i = 0; i < 10000; ++i)
+    {
+        if (phase.advance(-0.01))
+            ++wraps;
+        REQUIRE(phase.value() >= 0.0);
+        REQUIRE(phase.value() < 1.0);
+    }
+    REQUIRE(wraps == 100);
+}

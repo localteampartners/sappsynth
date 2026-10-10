@@ -1460,6 +1460,146 @@
     {
       "program": 211,
       "name": "Cathedral Choir Pad"
+    },
+    {
+      "program": 212,
+      "name": "Ultra Glass EP"
+    },
+    {
+      "program": 213,
+      "name": "Prism Pad"
+    },
+    {
+      "program": 214,
+      "name": "Crystal Chime"
+    },
+    {
+      "program": 215,
+      "name": "Silk Sub Bass"
+    },
+    {
+      "program": 216,
+      "name": "Airy Strings"
+    },
+    {
+      "program": 217,
+      "name": "Velvet Harp Pluck"
+    },
+    {
+      "program": 218,
+      "name": "Satin Square Lead"
+    },
+    {
+      "program": 219,
+      "name": "Starlight Bell Pad"
+    },
+    {
+      "program": 220,
+      "name": "Arena Strings"
+    },
+    {
+      "program": 221,
+      "name": "Ballad Synth Piano"
+    },
+    {
+      "program": 222,
+      "name": "Skyward Lead"
+    },
+    {
+      "program": 223,
+      "name": "Rainbow Brass"
+    },
+    {
+      "program": 224,
+      "name": "Night Rain Arp"
+    },
+    {
+      "program": 225,
+      "name": "Rock Drive Bass"
+    },
+    {
+      "program": 226,
+      "name": "Stadium Sync Lead"
+    },
+    {
+      "program": 227,
+      "name": "Crimson Pad"
+    },
+    {
+      "program": 228,
+      "name": "Polyrhythm Arp"
+    },
+    {
+      "program": 229,
+      "name": "Triplet Glitter Arp"
+    },
+    {
+      "program": 230,
+      "name": "Gated Saw Stab"
+    },
+    {
+      "program": 231,
+      "name": "Pump Chords"
+    },
+    {
+      "program": 232,
+      "name": "Robo Vox Lead"
+    },
+    {
+      "program": 233,
+      "name": "Vox Choir Pad"
+    },
+    {
+      "program": 234,
+      "name": "Electro Punch Bass"
+    },
+    {
+      "program": 235,
+      "name": "Pixel Square Lead"
+    },
+    {
+      "program": 236,
+      "name": "Cut-Up Stab"
+    },
+    {
+      "program": 237,
+      "name": "Island Marimba"
+    },
+    {
+      "program": 238,
+      "name": "Sunny Vibes"
+    },
+    {
+      "program": 239,
+      "name": "Lagoon Kalimba"
+    },
+    {
+      "program": 240,
+      "name": "Steel Pan Party"
+    },
+    {
+      "program": 241,
+      "name": "Breezy Pan Flute"
+    },
+    {
+      "program": 242,
+      "name": "Sunny Whistle"
+    },
+    {
+      "program": 243,
+      "name": "Pizzicato Pop"
+    },
+    {
+      "program": 244,
+      "name": "Island Pluck"
+    },
+    {
+      "program": 245,
+      "name": "Sunny Brass"
+    },
+    {
+      "program": 246,
+      "name": "Tropical Glock"
     }
   ],
   "articulations": []

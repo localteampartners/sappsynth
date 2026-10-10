@@ -7,7 +7,7 @@
 // instead of guesswork.
 //
 //   preset-audit             report every preset, exit 1 if any is too hot
-//   preset-audit --trims     print the master-dB trim each preset needs
+//   preset-audit --trims     print name|peak|trim|rms|category for level_presets.py
 //
 // The ceiling is peak headroom, not loudness: a synth should leave room for
 // the rest of the mix and never clip a chord at full velocity.
@@ -192,12 +192,14 @@ int main (int argc, char** argv)
 
         if (trimsOnly)
         {
-            // name | measured peak | the preset trim it rendered with, so the
-            // calibration can compute an absolute new trim (v0.15: the level
-            // lives in output.trim.db; master is the CC 7 fader).
+            // name | measured peak | the preset trim it rendered with | rms |
+            // category, so the calibration can compute an absolute new trim
+            // (v0.15: the level lives in output.trim.db; master is the CC 7
+            // fader) and, for the --rms-floor presets (v0.16), compare each
+            // one's RMS with its category's median.
             const float trim =
                 processor.apvts.getRawParameterValue (sappsynth::param::presetTrim)->load();
-            std::printf ("%s|%.2f|%.2f\n", bank[i].name, peakDb, trim);
+            std::printf ("%s|%.2f|%.2f|%.2f|%s\n", bank[i].name, peakDb, trim, rmsDb, bank[i].category);
         }
         else
         {

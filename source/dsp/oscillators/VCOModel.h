@@ -43,12 +43,16 @@ public:
         increment = std::clamp(hz / sr, 0.0, 0.45);
     }
 
-    // fmMultiplier scales this sample's frequency (1 = no modulation);
-    // clamped non-negative — no through-zero FM in this model.
+    // fmMultiplier scales this sample's frequency (1 = no modulation).
+    // THROUGH-ZERO (v0.16): a negative multiplier runs the phase backward.
+    // Until 0.16 it was clamped at zero, which half-wave rectified the
+    // modulation and pulled the note's average pitch SHARP whenever
+    // osc2.fmToOsc1 > 0.25 (+341 cents at 0.5). Symmetric about zero, the
+    // average frequency stays on the note at any depth. |inc| stays under
+    // 0.45 either way, as before.
     float tick(float pulseWidth, float fmMultiplier = 1.0f) noexcept
     {
-        const double inc = std::clamp(increment * static_cast<double>(std::max(fmMultiplier, 0.0f)),
-                                      0.0, 0.45);
+        const double inc = std::clamp(increment * static_cast<double>(fmMultiplier), -0.45, 0.45);
         return osc.tick(inc, std::clamp(pulseWidth, 0.05f, 0.95f));
     }
 

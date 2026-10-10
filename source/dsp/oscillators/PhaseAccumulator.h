@@ -15,12 +15,21 @@ public:
     }
 
     // Advance by increment (= frequency / sampleRate). Returns true on wrap.
+    // A negative increment runs the phase BACKWARD (through-zero FM, v0.16)
+    // and wraps below 0 the same way it wraps above 1.
     bool advance(double increment) noexcept
     {
         phase += increment;
         if (phase >= 1.0)
         {
             phase -= 1.0;
+            return true;
+        }
+        if (phase < 0.0)
+        {
+            phase += 1.0;
+            if (phase >= 1.0) // -1e-17 + 1.0 rounds to exactly 1.0
+                phase = 0.0;
             return true;
         }
         return false;

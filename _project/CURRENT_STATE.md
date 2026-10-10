@@ -2,7 +2,7 @@
 
 <!-- UPDATE WHEN: a feature ships, a deploy happens, something breaks, or something gets fixed. This file answers "what's the project like *right now*?" -->
 
-**2026-10-10: v0.15.0** — each preset's levelled trim lives in `output.trim.db` (no CC); `output.master.db` is the CC 7 fader. Before this, CC 7 replaced every preset's levelling in every song. `level_presets.py` writes `p::presetTrim`.
+**2026-10-10: v0.16.0** — 35 new presets (programs 212-246) in four new categories: JPOP, JROCK, ELECTRO, RESORT; 247 presets in 24 categories. Osc2>1 FM is through-zero (the 21 presets above fm 0.25 played up to +642 cents sharp; now on the note). 40 short, spiky presets are levelled by the RMS-floor rule (`level_presets.py --rms-floor`). Since v0.15 each preset's levelled trim lives in `output.trim.db` (no CC); `output.master.db` is the CC 7 fader. `level_presets.py` writes `p::presetTrim`.
 
 **Last verified:** 2026-10-09 (v0.12.0 on master: in-voice supersaw unison, FDN hall, tempo sync, CC 3 clean, bank re-levelled — nothing listened to; see `_project/CHANGELOG.md`)
 re-levelled, 68 tests green, auval PASS)
@@ -46,9 +46,9 @@ re-levelled, 68 tests green, auval PASS)
   silence, so they're click-free.
 - **Plugin** (JUCE 8.0.15): Standalone + VST3 + AU. **Vintage hardware UI**:
   generated walnut cheeks, crinkle panel, photoreal 101-frame filmstrip knobs
-  (ivory + black bakelite), engraved sections, pilot lamp, 186 factory presets,
+  (ivory + black bakelite), engraved sections, pilot lamp, 247 factory presets,
   NEW UNIT reroll. **auval passes.**
-- **Presets, both halves**: 186 factory presets selected by MIDI program change
+- **Presets, both halves**: 247 factory presets selected by MIDI program change
   or the host program API, plus USER presets saved from the SAVE button to
   `~/Documents/SappSounds/presets/sappsynth/` in the shared SappLink format
   (`sapptune/sapplink/PRESETS.md`) and loaded by name. A `preset`
@@ -112,7 +112,7 @@ and swept — without the second, every number depends on the ORDER of the bank.
 
 ## 2026-08-08 — preset library
 
-- 186 factory presets in 19 categories (source/plugin/FactoryPresets.cpp),
+- 247 factory presets in 24 categories (source/plugin/FactoryPresets.cpp),
   all reachable by MIDI program change. Append new presets at the END:
   program numbers are the bank index and hosts save them in projects.
 - `python3 scripts/check_presets.py` validates the bank against the live
