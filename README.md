@@ -88,3 +88,24 @@ Full setup, including the per-repo registration steps:
 [sapptune/RUNNER.md](https://github.com/localteampartners/sapptune/blob/master/RUNNER.md).
 
 **Builds are Windows-only** — macOS jobs were removed on 2026-08-08.
+
+## 0.12 — what changed for hosts and for sapptune (2026-10-09)
+
+- Unison (1-7) renders inside one voice card: a real supersaw, no polyphony
+  cost. `Uni Spread` is the members' level; width comes from the chorus.
+- The reverb is an FDN hall: `fx.reverb.predelay.ms`, `fx.reverb.damping`,
+  `fx.reverb.mod`, `fx.reverb.hicut.hz` (SappLink CC 17-20; unison on CC
+  14-16). The plugin UI has no knobs for these yet — they are ordinary
+  automatable parameters.
+- `lfo.sync`, `arp.sync`, `fx.delay.sync` lock to the host tempo (Free, 1/1 …
+  1/16, triplets, dotted).
+- CC 3 `clean` scales character, drift, warm-up, hiss and bleed together.
+- Presets 186 "Riff Fuzz Lead" and 187 "Chrome Solo" sit at the END of the
+  bank. MIDI program changes reach only 0-127; select these two through the
+  `preset` host parameter by name — sapptune styles do it with
+  `patches: { "lead": "Riff Fuzz Lead" }`. Never renumber the bank: the
+  program numbers are a contract with sapptune's manifest.
+- The bank was re-levelled by measurement: `cmake --build build-audit
+  --target preset-audit`, then `preset-audit --trims | python3
+  scripts/level_presets.py - --write`, two passes, after ANY engine change
+  that moves levels (see `_project/CHANGELOG.md`).
