@@ -42,6 +42,7 @@ struct SharedModulation
     // v0.13 performance controls (plan E3): the mod wheel adds vibrato on
     // top of the patch's LFO->pitch, channel pressure opens the filter.
     float wheelVibratoCents { 0.0f };
+    float bendSemis { 0.0f };       // pitch wheel, smoothed (v0.14)
     float pressureOct { 0.0f };
 };
 

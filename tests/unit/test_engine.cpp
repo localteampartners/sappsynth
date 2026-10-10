@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 #include <cmath>
 #include <vector>
 #include "engine/SynthEngine.h"
@@ -275,4 +276,33 @@ TEST_CASE("v0.13 modulation: LFO>PW moves a pulse, sync tears, the wheel adds vi
     const double hfBase = highBand(base.left), hfPressed = highBand(pressed.left);
     INFO("high band base " << hfBase << " pressed " << hfPressed);
     REQUIRE(hfPressed > hfBase * 1.5);
+}
+
+TEST_CASE("v0.14 pitch bend: +2 semitones raises the pitch by a whole tone, smoothly")
+{
+    PatchState patch = basicPatch();
+    patch.osc1.waveform = Waveform::Sine;
+    patch.characterAmount = 0.0f;
+    patch.driftAmountCents = 0.0f;
+    patch.cutoffHz = 12000.0f;
+    auto freqOf = [](const std::vector<float>& x, std::size_t a, std::size_t b)
+    {
+        int crossings = 0;
+        for (std::size_t i = a + 1; i < b; ++i) if (x[i - 1] < 0.0f && x[i] >= 0.0f) ++crossings;
+        return crossings * 48000.0 / double(b - a);
+    };
+    SynthEngine engine;
+    engine.setUnitSeed(9);
+    engine.setPatch(patch);
+    engine.prepare(48000.0, 256);
+    Event bend; bend.type = Event::Type::PitchBend; bend.velocity = 2.0f;
+    std::vector<TimedEvent> events {
+        { 0.0, { Event::Type::NoteOn, 0, 57, 0.8f } },
+        { 0.5, bend },
+    };
+    const auto r = OfflineRenderer::render(engine, events, 1.0);
+    const double before = freqOf(r.left, 4800, 23000), after = freqOf(r.left, 28000, 46000);
+    INFO("before " << before << " after " << after);
+    REQUIRE(before == Catch::Approx(220.0).margin(4.0));
+    REQUIRE(after == Catch::Approx(246.94).margin(5.0));
 }

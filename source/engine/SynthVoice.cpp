@@ -182,7 +182,8 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
                           + scaledOffset(noteVar_.pitchStartCents, character) / 100.0f
                           + (mod.warmupCents + mod.supplyPitchCents) / 100.0f
                           + start_.unisonDetuneCents / 100.0f
-                          + glideOffsetSemis;
+                          + glideOffsetSemis
+                          + mod.bendSemis;
 
     osc1.setWaveform(patch.osc1.waveform);
     osc2.setWaveform(patch.osc2.waveform);
@@ -225,8 +226,11 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
 
     // LFO -> pulse width (v0.13): the PWM string machine finally has PWM
     const float pwMod = mod.lfoValue * patch.lfoToPw * 0.42f;
-    const float pwm = patch.osc1.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character) + pwMod;
-    const float pwm2 = patch.osc2.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character) + pwMod;
+    // clamped once here (audit, v0.14): osc1/osc2 clamp inside VCOModel, but
+    // the unison stack calls the raw oscillator, and a width outside (0,1)
+    // makes the PolyBLEP residual explode into a full-scale blast
+    const float pwm = std::clamp(patch.osc1.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character) + pwMod, 0.05f, 0.95f);
+    const float pwm2 = std::clamp(patch.osc2.pulseWidth + scaledOffset(profile_.pulseWidthOffset, character) + pwMod, 0.05f, 0.95f);
 
     // Velocity into amplitude with a soft curve plus per-note tilt.
     const float velGain = (0.25f + 0.75f * velocity_ * velocity_)

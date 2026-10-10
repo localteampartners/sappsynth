@@ -6,6 +6,32 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-10-10 — 0.14.0: pitch bend, cleaner rock leads, and the audit's fixes
+
+From Michael's first station listening ("midnight highway had a bad lead with
+too much delay") and the memory-safety audit of everything since 0.11.
+
+- **Pitch bend.** The plugin now reads the pitch wheel (±2 semitones, the
+  range sapptune's manifest declares), sample-accurate through the event
+  queue and smoothed over ~3 ms. Until now every bend sapptune's rock solo
+  wrote was dropped.
+- **Riff Fuzz Lead / Chrome Solo** lose their internal delay, reverb, LFO
+  vibrato and most of their glide (45 → 15 ms). The rack after them carries
+  the space, with one delay synced to the song's tempo — two delays and two
+  reverbs stacked was the smear. Bank re-levelled (`preset-audit`, two
+  passes: 212 presets, 0 above -3 dBFS).
+- **Audit fixes** (79-agent review, each finding verified by three
+  refuters): a restored session no longer re-applies the preset it was
+  saved on and overwrites the user's tweaks; the save-preset dialog's
+  callback is safe if the editor closes first; unison members get a clamped
+  pulse width (LFO>PW past the edge made the unison stack blast full
+  scale); synced arp divisions are no longer pulled off the grid by a
+  0.25 Hz floor; the hall survives a NaN parameter and starts from silence
+  when re-enabled instead of replaying a frozen tail; `setHostTempo`
+  ignores non-finite tempos.
+- The audit also confirmed that the `ccSlews` overflow alone explains issue
+  #3, which Michael verified fixed on the station with 0.13.1.
+
 ## 2026-10-10 — 0.13.1: two memory bugs that crashed the Windows host (issue #3)
 
 Found on the station box by Michael: every SappSynth ≥ 0.12 chain crashed

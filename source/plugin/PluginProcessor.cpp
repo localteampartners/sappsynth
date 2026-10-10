@@ -518,6 +518,13 @@ void SappSynthProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
                 handleSappLinkCc(message.getControllerNumber(), message.getControllerValue());
             continue;
         }
+        else if (message.isPitchWheel())
+        {
+            // v0.14: the wheel, ±2 semitones (sapptune's manifest range),
+            // sample-accurate through the event queue.
+            event.type = Event::Type::PitchBend;
+            event.velocity = static_cast<float>(message.getPitchWheelValue() - 8192) / 8192.0f * 2.0f;
+        }
         else if (message.isChannelPressure() || message.isAftertouch())
         {
             engine.setAftertouch(static_cast<float>(message.isChannelPressure()
@@ -565,7 +572,15 @@ void SappSynthProcessor::setStateInformation(const void* data, int sizeInBytes)
         auto state = juce::ValueTree::fromXml(*xml);
         if (state.isValid())
         {
-            apvts.replaceState(state);
+            // Restoring a session must not re-apply the preset the session was
+            // saved on: that overwrote every tweak the user made after loading
+            // it (audit, v0.14). Guard the listener and drop anything queued.
+            {
+                const juce::ScopedValueSetter<bool> guard(applyingPreset, true);
+                apvts.replaceState(state);
+            }
+            pendingPresetChoice.store(-1);
+            pendingProgram.store(-1);
             const auto seedText = state.getProperty("unitSeed").toString();
             if (seedText.isNotEmpty())
                 engine.setUnitSeed(seedText.getLargeIntValue() > 0

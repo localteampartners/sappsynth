@@ -676,21 +676,25 @@ void SappSynthEditor::promptSaveUserPreset()
     saveWindow->addTextEditor("name", presetButton.getButtonText(), "Name");
     saveWindow->addButton("SAVE", 1, juce::KeyPress(juce::KeyPress::returnKey));
     saveWindow->addButton("CANCEL", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-    saveWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int result)
+    // SafePointer: the host may close the editor while the dialog is up; the
+    // callback must not touch a destroyed editor (audit, v0.14).
+    saveWindow->enterModalState(true, juce::ModalCallbackFunction::create(
+        [safe = juce::Component::SafePointer<SappSynthEditor>(this)](int result)
     {
-        if (saveWindow == nullptr)
+        auto* self = safe.getComponent();
+        if (self == nullptr || self->saveWindow == nullptr)
             return;
-        const auto name = saveWindow->getTextEditorContents("name").trim();
-        saveWindow.reset();
+        const auto name = self->saveWindow->getTextEditorContents("name").trim();
+        self->saveWindow.reset();
         if (result != 1 || name.isEmpty())
             return;
 
         juce::String error;
-        const bool ok = processor.saveUserPreset(name, {}, error);
+        const bool ok = self->processor.saveUserPreset(name, {}, error);
         if (ok)
         {
-            presetButton.setButtonText(name);
-            presetBrowser.refreshUserPresets();
+            self->presetButton.setButtonText(name);
+            self->presetBrowser.refreshUserPresets();
         }
         juce::NativeMessageBox::showAsync(
             juce::MessageBoxOptions()

@@ -132,6 +132,9 @@ void SynthEngine::applyEvent(const Event& event)
             arpHeldCount = 0;
             voiceManager.allNotesOff();
             break;
+        case Event::Type::PitchBend:
+            setPitchBend(event.velocity);
+            break;
     }
 }
 
@@ -167,7 +170,10 @@ void SynthEngine::processArp(int numSamples)
 
     const float arpHz = effectivePatch_.arpSync > 0 ? syncHz(effectivePatch_.arpSync, hostBpm_)
                                                      : effectivePatch_.arpRateHz;
-    const double stepLength = sr / std::clamp(arpHz, 0.25f, 30.0f);
+    // synced divisions reach 1/1 at 40 bpm (0.17 Hz) and 1/16 at 300 bpm
+    // (20 Hz); the old 0.25 Hz floor silently pulled slow divisions off the
+    // grid (audit, v0.14)
+    const double stepLength = sr / std::clamp(arpHz, 0.05f, 60.0f);
     arpStepCountdown += stepLength;
     if (arpStepCountdown <= 0.0) // rate went up a lot; resync
         arpStepCountdown = stepLength;
@@ -219,6 +225,14 @@ void SynthEngine::updateControl(int numSamples)
 {
     sharedMod.lfoValue = lfo.process(numSamples);
     sharedMod.wheelVibratoCents = modWheel_ * 40.0f;
+    // Pitch bend (v0.14): one-pole glide toward the wheel, ~3 ms, so stepped
+    // MIDI bend curves arrive as a smooth bend and never zipper.
+    {
+        const float coef = 1.0f - std::exp(-static_cast<float>(numSamples) / (0.003f * static_cast<float>(sr)));
+        bendSemis_ += (bendTarget_ - bendSemis_) * coef;
+        if (std::abs(bendTarget_ - bendSemis_) < 1.0e-5f) bendSemis_ = bendTarget_;
+        sharedMod.bendSemis = bendSemis_;
+    }
     sharedMod.pressureOct = aftertouch_ * 1.5f;
     sharedMod.unitDriftNorm = labDriftFrozen.load(std::memory_order_relaxed)
                             ? unitDrift.value() : unitDrift.process(numSamples);

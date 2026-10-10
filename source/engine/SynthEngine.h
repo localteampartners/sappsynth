@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include "PatchState.h"
 #include "RenderContext.h"
@@ -69,10 +70,14 @@ public:
     float clean() const noexcept { return clean_; }
     /** Mod wheel (CC 1) 0..1: adds up to 40 cents of LFO vibrato (v0.13). */
     void setModWheel(float amount01) noexcept { modWheel_ = std::clamp(amount01, 0.0f, 1.0f); }
+    /** Pitch bend in semitones (v0.14). The plugin maps the 14-bit wheel to
+        ±2 semitones — the range sapptune's manifest declares. */
+    void setPitchBend(float semitones) noexcept { bendTarget_ = std::isfinite(semitones) ? std::clamp(semitones, -12.0f, 12.0f) : 0.0f; }
+    float pitchBend() const noexcept { return bendSemis_; }
     /** Channel / poly aftertouch 0..1: opens the filter up to 1.5 octaves (v0.13). */
     void setAftertouch(float amount01) noexcept { aftertouch_ = std::clamp(amount01, 0.0f, 1.0f); }
     /** Host tempo for the sync choices (engine/TempoSync.h). Default 120. */
-    void setHostTempo(double bpm) noexcept { hostBpm_ = bpm > 20.0 ? bpm : hostBpm_; }
+    void setHostTempo(double bpm) noexcept { if (std::isfinite(bpm) && bpm > 20.0 && bpm < 999.0) hostBpm_ = bpm; }
     double hostTempo() const noexcept { return hostBpm_; }
 
     void process(const RenderBlock& block);
@@ -150,6 +155,8 @@ private:
     double hostBpm_ { 120.0 };
     float clean_ { 0.0f };
     float modWheel_ { 0.0f };
+    float bendTarget_ { 0.0f };
+    float bendSemis_ { 0.0f };
     float aftertouch_ { 0.0f };
     /** CC 3: every imperfection source scaled by (1 - clean), together. */
     void applyClean(PatchState& p) const noexcept

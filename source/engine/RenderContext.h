@@ -8,7 +8,8 @@ namespace sappsynth {
 // block into spans at event boundaries; events must be sorted by sampleOffset.
 struct Event
 {
-    enum class Type { NoteOn, NoteOff, AllNotesOff };
+    // PitchBend (v0.14): `velocity` carries the bend in semitones (±range).
+    enum class Type { NoteOn, NoteOff, AllNotesOff, PitchBend };
 
     Type type { Type::NoteOn };
     int sampleOffset { 0 };

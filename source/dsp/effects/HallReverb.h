@@ -47,8 +47,13 @@ public:
     void setParameters(float size01, float mixAmount, float predelayMs = 12.0f, float damping01 = 0.45f,
                        float modDepth01 = 0.35f, float hiCutHz = 9000.0f) noexcept
     {
+        // a NaN parameter would latch NaN into the feedback network for good
+        // (audit, v0.14): non-finite inputs fall back to safe defaults
+        auto finite = [](float v, float fallback) { return std::isfinite(v) ? v : fallback; };
+        size01 = finite(size01, 0.5f); mixAmount = finite(mixAmount, 0.0f); predelayMs = finite(predelayMs, 12.0f);
+        damping01 = finite(damping01, 0.45f); modDepth01 = finite(modDepth01, 0.35f); hiCutHz = finite(hiCutHz, 9000.0f);
         const float s = std::clamp(size01, 0.0f, 1.0f);
-        size = s;
+        sizeParam = s;
         sizeScale = 0.55f + 0.95f * s;
         decaySeconds = 0.6f + 11.4f * s * s;
         damping = std::clamp(damping01, 0.0f, 1.0f);
@@ -64,7 +69,20 @@ public:
     void process(float* left, float* right, int n) noexcept
     {
         if (mix <= 0.0001f)
+        {
+            bypassed = true;
             return;
+        }
+        if (bypassed)
+        {
+            // re-enabled: start from silence, not from the tail that was
+            // frozen when the mix went to zero (audit, v0.14)
+            for (auto& line : lines) std::fill(line.begin(), line.end(), 0.0f);
+            std::fill(predelayLine.begin(), predelayLine.end(), 0.0f);
+            for (float& d : dampState) d = 0.0f;
+            hiCutState[0] = hiCutState[1] = 0.0f;
+            bypassed = false;
+        }
         const float k = 2.0f / static_cast<float>(kLines);
         for (int i = 0; i < n; ++i)
         {
@@ -174,7 +192,7 @@ private:
         // room still take ~3.5 dB off the top, hence the size tilt. Both
         // constants are measured (tests/unit/test_effects.cpp, "Hall: full
         // wet"): full wet lands at the dry broadband level within a dB.
-        wetFeed = kWetReference * (1.0f + kSizeTilt * size) * std::sqrt(std::max(meanLoss, 1.0e-4f));
+        wetFeed = kWetReference * (1.0f + kSizeTilt * sizeParam) * std::sqrt(std::max(meanLoss, 1.0e-4f));
     }
 
     static constexpr float kWetReference = 3.75f;
@@ -196,10 +214,11 @@ private:
     float hiCutCoef { 0.5f };
     float hiCutState[2] { 0.0f, 0.0f };
 
-    float size { 0.5f }, sizeScale { 1.0f }, decaySeconds { 2.6f }, damping { 0.45f }, modDepth { 0.35f };
+    float sizeParam { 0.5f }, sizeScale { 1.0f }, decaySeconds { 2.6f }, damping { 0.45f }, modDepth { 0.35f };
     float dampCoef { 0.66f }, modSamples { 3.0f };
     float mix { 0.0f };
     float wetFeed { 1.0f };
+    bool bypassed { true };
 };
 
 } // namespace sappsynth
