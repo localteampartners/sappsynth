@@ -58,10 +58,18 @@ struct PatchState
     float arpRateHz { 8.0f };         // steps per second
     int arpOctaves { 1 };             // 1..3
     float arpGate { 0.5f };           // fraction of a step the note sounds
+    // v0.12 tempo sync (engine/TempoSync.h): 0 = free (the Hz / seconds
+    // values above), 1..9 = a note division of the host tempo.
+    int lfoSync { 0 };
+    int arpSync { 0 };
+    int delaySync { 0 };
 
-    // Unison stacks voice cards per note (center-preserving detune, stereo
-    // spread, 1/sqrt(N) gain compensation). Eats polyphony, like hardware.
-    int unisonCount { 1 };            // 1..5
+    // Unison (v0.3): up to seven members rendered INSIDE one voice card —
+    // osc1 plus six detuned copies on a nonlinear spread, random start
+    // phases, loudness-compensated. Does not eat polyphony any more.
+    // `unisonSpread` is the members' level relative to the centre (the
+    // "width" of the stack; stereo width comes from the chorus).
+    int unisonCount { 1 };            // 1..7
     float unisonDetuneCents { 12.0f };// 0..50
     float unisonSpread { 0.7f };      // 0..1
     float glideSeconds { 0.0f };      // 0..1 (0 = off)
@@ -74,6 +82,11 @@ struct PatchState
     float delayMix { 0.0f };
     float reverbSize { 0.5f };
     float reverbMix { 0.0f };
+    // v0.12 hall controls (dsp/effects/HallReverb.h)
+    float reverbPredelayMs { 12.0f };  // 0..120
+    float reverbDamping { 0.45f };     // 0..1
+    float reverbMod { 0.35f };         // 0..1
+    float reverbHiCutHz { 9000.0f };   // 1000..20000
 
     // Analog DNA (architecture §9 + docs/analog-dna.md). characterAmount is
     // the DNA master; the macros below shape *which* behaviors dominate.

@@ -1,4 +1,5 @@
 #include "SynthEngine.h"
+#include "TempoSync.h"
 #include <algorithm>
 #include <cmath>
 #include "../dsp/nonlinear/OutputStage.h"
@@ -45,6 +46,7 @@ void SynthEngine::prepare(double sampleRate, int maxBlockSize)
     voiceManager.applyQuality(ProcessingQuality::forMode(activeQuality));
 
     effectivePatch_ = patch_;
+    applyClean(effectivePatch_);
     prepared = true;
 }
 
@@ -163,7 +165,9 @@ void SynthEngine::processArp(int numSamples)
     if (arpStepCountdown > 0.0)
         return;
 
-    const double stepLength = sr / std::clamp(effectivePatch_.arpRateHz, 0.25f, 30.0f);
+    const float arpHz = effectivePatch_.arpSync > 0 ? syncHz(effectivePatch_.arpSync, hostBpm_)
+                                                     : effectivePatch_.arpRateHz;
+    const double stepLength = sr / std::clamp(arpHz, 0.25f, 30.0f);
     arpStepCountdown += stepLength;
     if (arpStepCountdown <= 0.0) // rate went up a lot; resync
         arpStepCountdown = stepLength;
@@ -227,6 +231,7 @@ void SynthEngine::updateControl(int numSamples)
     effectivePatch_.cutoffHz = smCutoff.next();
     effectivePatch_.resonance = smResonance.next();
     effectivePatch_.mixerDrive = smMixerDrive.next();
+    applyClean(effectivePatch_);
 
     // Operating mode (docs/analog-dna.md): Ideal strips every modeled
     // behavior; Exaggerated multiplies it for the educational modes.
@@ -287,7 +292,15 @@ void SynthEngine::updateControl(int numSamples)
         diag.unitDriftNorm.store(sharedMod.unitDriftNorm, std::memory_order_relaxed);
     }
 
-    lfo.setRate(patch_.lfoRateHz);
+    if (clean_ > 0.0f)
+    {
+        // CC 3 also takes the unit's hiss and VCA bleed down with it
+        const float keep = 1.0f - clean_;
+        sharedMod.noiseFloorAmp *= keep;
+        sharedMod.bleedScale *= keep;
+    }
+
+    lfo.setRate(patch_.lfoSync > 0 ? syncHz(patch_.lfoSync, hostBpm_) : patch_.lfoRateHz);
     lfo.setShape(patch_.lfoShape);
 
     // Drift dynamics: speed knob sets mean-reversion; sigma keeps the
@@ -365,8 +378,10 @@ void SynthEngine::process(const RenderBlock& block)
 
     // Global FX chain (§7: SUM -> DRIVE -> FX -> OUT), then master gain.
     chorus.setParameters(patch_.chorusMix, patch_.chorusRateHz);
-    delayFx.setParameters(patch_.delayTimeS, patch_.delayFeedback, patch_.delayMix);
-    reverbFx.setParameters(patch_.reverbSize, patch_.reverbMix);
+    delayFx.setParameters(patch_.delaySync > 0 ? syncSeconds(patch_.delaySync, hostBpm_) : patch_.delayTimeS,
+                          patch_.delayFeedback, patch_.delayMix);
+    reverbFx.setParameters(patch_.reverbSize, patch_.reverbMix, patch_.reverbPredelayMs, patch_.reverbDamping,
+                           patch_.reverbMod, patch_.reverbHiCutHz);
     chorus.process(block.left, block.right, block.numSamples);
     delayFx.process(block.left, block.right, block.numSamples);
     reverbFx.process(block.left, block.right, block.numSamples);

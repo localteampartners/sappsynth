@@ -84,32 +84,25 @@ SynthVoice* VoiceManager::findStealTarget() noexcept
 void VoiceManager::noteOn(int note, float velocity, const PatchState& patch, const UnitProfile& unit,
                           int glideFromNote)
 {
+    // One note = one voice card. Unison members are rendered INSIDE the card
+    // (SynthVoice's stack) since v0.3; before, each member took a card of its
+    // own, so a 5-voice unison lead on an 8-voice patch was mono and a
+    // supersaw pad stole its own notes.
     const int polyphony = std::clamp(patch.polyphony, 1, kMaxVoices);
-    const int unison = std::clamp(patch.unisonCount, 1, 5);
-    const float gainComp = 1.0f / std::sqrt(static_cast<float>(unison));
+    SynthVoice* target = activeVoiceCount() < polyphony ? findFreeVoice() : nullptr;
+    if (target == nullptr)
+        target = findStealTarget();
+    if (target == nullptr)
+        return;
 
-    for (int u = 0; u < unison; ++u)
-    {
-        SynthVoice* target = activeVoiceCount() < polyphony ? findFreeVoice() : nullptr;
-        if (target == nullptr)
-            target = findStealTarget();
-        if (target == nullptr)
-            return;
+    SynthVoice::NoteStart start;
+    start.unisonDetuneCents = 0.0f;
+    start.unisonPan = 0.0f;
+    start.unisonGain = 1.0f;
+    start.glideFromNote = glideFromNote;
 
-        // Center-preserving spread: members sit symmetrically around the
-        // played pitch; a lone voice sits exactly on it.
-        const float position = unison == 1 ? 0.0f
-            : 2.0f * static_cast<float>(u) / static_cast<float>(unison - 1) - 1.0f;
-
-        SynthVoice::NoteStart start;
-        start.unisonDetuneCents = position * patch.unisonDetuneCents;
-        start.unisonPan = position * patch.unisonSpread;
-        start.unisonGain = gainComp;
-        start.glideFromNote = glideFromNote;
-
-        target->setAllocationAge(allocationCounter++);
-        target->noteOn(note, velocity, seeds::noteSeed(unitSeed_, noteCounter++), patch, unit, start);
-    }
+    target->setAllocationAge(allocationCounter++);
+    target->noteOn(note, velocity, seeds::noteSeed(unitSeed_, noteCounter++), patch, unit, start);
 }
 
 void VoiceManager::noteOff(int note)

@@ -2,13 +2,25 @@
 
 <!-- UPDATE WHEN: a feature ships, a deploy happens, something breaks, or something gets fixed. This file answers "what's the project like *right now*?" -->
 
-**Last verified:** 2026-08-10 (v0.11.0 gain-staging rework: preset audit
+**Last verified:** 2026-10-09 (v0.12.0 on master: in-voice supersaw unison, FDN hall, tempo sync, CC 3 clean, bank re-levelled — nothing listened to; see `_project/CHANGELOG.md`)
 re-levelled, 68 tests green, auval PASS)
 
 ---
 
 ## What's built and working
 
+- **v0.12.0 (2026-10-09) — the supersaw exists, and so does a hall.** Unison
+  members render INSIDE one voice card (`SynthVoice::uniOsc`, 1-7, peak-
+  normalised, no polyphony cost); the reverb is an 8-line modulated FDN
+  hall (`dsp/effects/HallReverb.h`: predelay, damping, modulation, hi-cut,
+  0.6-12 s); LFO / arp / delay can sync to the host tempo (`TempoSync.h`);
+  CC 3 `clean` scales every imperfection source; SappLink CC 14-20 expose
+  unison and the hall; the bank was re-levelled by `preset-audit` (-6 dBFS
+  at eight notes). The plugin UI has no knobs yet for the hall's four new
+  controls or the sync choices — they are host-automatable parameters.
+  **NOT heard.** Next (MUSIC-QUALITY-PLAN E3-E4): per-voice LFO, mod
+  wheel / aftertouch / velocity→amp, a mod matrix, hard sync, HP/BP modes,
+  then the ~70-patch hero bank authored against reference tracks.
 - **DSP core** (`sappsynth_core`, framework-free C++20): PolyBLEP oscillators
   (+ naive renderers for Lab comparison), nonlinear pre-filter mixer + DC
   blocker, ZDF ladder filter with per-stage saturation and self-oscillation,

@@ -17,7 +17,7 @@ struct CCMapping
     Curve curve;
 };
 
-constexpr int kNumMappings = 20;
+constexpr int kNumMappings = 27;
 const std::array<CCMapping, kNumMappings>& mappings();
 
 // nullptr if this CC is not part of the SappLink contract.

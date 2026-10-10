@@ -33,6 +33,14 @@ const std::array<CCMapping, kNumMappings>& mappings()
         { 28, p::arpRate,       0.5f,     20.0f,    Curve::Log },
         { 29, p::arpGate,       0.05f,    0.95f,    Curve::Linear },
         { 7,  p::master,        -40.0f,   6.0f,     Curve::Linear },
+        // v0.12: unison and the hall (sapptune manifest CC 14-20)
+        { 14, p::unisonCount,   1.0f,     7.0f,     Curve::Linear },
+        { 15, p::unisonDetune,  0.0f,     50.0f,    Curve::Linear },
+        { 16, p::unisonSpread,  0.0f,     1.0f,     Curve::Linear },
+        { 17, p::reverbPredelay, 0.0f,    120.0f,   Curve::Linear },
+        { 18, p::reverbDamping, 0.0f,     1.0f,     Curve::Linear },
+        { 19, p::reverbMod,     0.0f,     1.0f,     Curve::Linear },
+        { 20, p::reverbHiCut,   1000.0f,  20000.0f, Curve::Log },
     } };
     return table;
 }

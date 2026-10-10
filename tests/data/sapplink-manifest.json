@@ -106,7 +106,7 @@
     },
     {
       "id": "lfo.toCutoff",
-      "label": "LFO→Cutoff",
+      "label": "LFO\u2192Cutoff",
       "cc": 77,
       "range": [
         0,
@@ -120,7 +120,7 @@
     },
     {
       "id": "lfo.toPitch.cents",
-      "label": "LFO→Pitch",
+      "label": "LFO\u2192Pitch",
       "cc": 78,
       "range": [
         0,
@@ -225,7 +225,8 @@
       "curve": "linear",
       "tags": [
         "waver",
-        "vintage"
+        "vintage",
+        "imperfection"
       ]
     },
     {
@@ -239,7 +240,8 @@
       "curve": "linear",
       "tags": [
         "waver",
-        "vintage"
+        "vintage",
+        "imperfection"
       ]
     },
     {
@@ -280,82 +282,1066 @@
       "tags": [
         "volume"
       ]
+    },
+    {
+      "id": "clean",
+      "label": "Clean",
+      "cc": 3,
+      "range": [
+        0,
+        1
+      ],
+      "curve": "linear",
+      "tags": [
+        "clean",
+        "imperfection"
+      ]
+    },
+    {
+      "id": "voice.unison.count",
+      "label": "Unison",
+      "cc": 14,
+      "range": [
+        1,
+        7
+      ],
+      "curve": "linear",
+      "tags": [
+        "width",
+        "thickness",
+        "supersaw"
+      ]
+    },
+    {
+      "id": "voice.unison.detune.cents",
+      "label": "Uni Detune",
+      "cc": 15,
+      "range": [
+        0,
+        50
+      ],
+      "curve": "linear",
+      "tags": [
+        "width",
+        "thickness",
+        "supersaw"
+      ]
+    },
+    {
+      "id": "voice.unison.spread",
+      "label": "Uni Spread",
+      "cc": 16,
+      "range": [
+        0,
+        1
+      ],
+      "curve": "linear",
+      "tags": [
+        "width",
+        "thickness"
+      ]
+    },
+    {
+      "id": "fx.reverb.predelay.ms",
+      "label": "Verb Pre",
+      "cc": 17,
+      "range": [
+        0,
+        120
+      ],
+      "curve": "linear",
+      "tags": [
+        "space",
+        "depth"
+      ]
+    },
+    {
+      "id": "fx.reverb.damping",
+      "label": "Verb Damp",
+      "cc": 18,
+      "range": [
+        0,
+        1
+      ],
+      "curve": "linear",
+      "tags": [
+        "space",
+        "darkness"
+      ]
+    },
+    {
+      "id": "fx.reverb.mod",
+      "label": "Verb Mod",
+      "cc": 19,
+      "range": [
+        0,
+        1
+      ],
+      "curve": "linear",
+      "tags": [
+        "space",
+        "shimmer",
+        "movement"
+      ]
+    },
+    {
+      "id": "fx.reverb.hicut.hz",
+      "label": "Verb HiCut",
+      "cc": 20,
+      "range": [
+        1000,
+        20000
+      ],
+      "curve": "log",
+      "tags": [
+        "space",
+        "air",
+        "darkness"
+      ]
+    }
+  ],
+  "hostParameters": [
+    {
+      "id": "preset",
+      "label": "Preset",
+      "type": "choice",
+      "automatable": true,
+      "choices": [
+        "Init",
+        "Acid Bass",
+        "Model Growl",
+        "Taurus Rumble",
+        "Velvet Bass",
+        "Rubber Bass",
+        "Fat Fifth Lead",
+        "Lucky Lead",
+        "Hoover Rave",
+        "Whistle (Self-Osc)",
+        "Silver Flute",
+        "Solina Glide",
+        "Juno Chorus Keys",
+        "Vintage Organ",
+        "Punchy Pluck",
+        "Warm Brass",
+        "Poly Comp Stab",
+        "Church Organ",
+        "FM E-Piano",
+        "FM Bells",
+        "Glass Clang",
+        "Metal Drone",
+        "Wurli Bite",
+        "Sunken Bells",
+        "Drift Pad",
+        "Jupiter Sweep Pad",
+        "PWM Strings",
+        "Polysix Strings",
+        "Super Saw Stack",
+        "Tape Flute",
+        "Glacier Pad",
+        "Analog Choir",
+        "Dark Cathedral",
+        "Warm Tape Pad",
+        "Widescreen",
+        "Aurora Swell",
+        "Shimmer Drift",
+        "Evening Haze",
+        "Slow Breath",
+        "Static Field",
+        "Hollow Reed",
+        "Berlin School",
+        "Disco Octaves",
+        "Dream Cascade",
+        "Neon Nights",
+        "Crystal Run",
+        "Midnight Train",
+        "Pluck & Bloom",
+        "Arcadia",
+        "Harp Machine",
+        "Berlin Sunrise",
+        "Gamelan Steps",
+        "Sequenced Acid",
+        "Noise Ticker",
+        "Steam Engine",
+        "Perc Circuit",
+        "Industrial Loom",
+        "Rain on Tin",
+        "Generative Dub",
+        "Clockwork",
+        "Ghost Snare",
+        "Tidal Pulse",
+        "Morse Static",
+        "Ideal Mono Bass",
+        "Analog DNA Mono Bass",
+        "Warm Oscillator Lead",
+        "Aging Poly Chords",
+        "Voice Round-Robin Keys",
+        "Driven Ladder Bass",
+        "Soft Supply Pad",
+        "Worn Calibration Brass",
+        "Clean vs Saturated Seq",
+        "Maximum DNA Demo",
+        "Ladder Lead",
+        "Model D Brass",
+        "Fat Mono Bass",
+        "Emerson Solo",
+        "Ladder Sub Bass",
+        "Portamento Lead",
+        "Filter Growl Bass",
+        "Woody Lead",
+        "Resonant Blip",
+        "Ladder Brass Stab",
+        "Bass Pedal",
+        "Screaming Lead",
+        "Jupiter Strings",
+        "Jupiter Brass",
+        "Prophet Poly",
+        "Juno Pad Classic",
+        "PWM Ensemble",
+        "Poly Stab",
+        "Poly Voices",
+        "Vintage Poly Keys",
+        "String Machine",
+        "Brass Section",
+        "Soft Poly Pad",
+        "Detuned Organ",
+        "DX Tine EP",
+        "FM Bell Keys",
+        "Glass Marimba",
+        "FM Bass Slap",
+        "Tubular Bell",
+        "FM Brass",
+        "Metal Pad",
+        "Digital Harp",
+        "FM Clav",
+        "Bell Pad",
+        "Wood Bass FM",
+        "FM Whistle",
+        "Supersaw Lead",
+        "Trance Pluck",
+        "Gated Trance Pad",
+        "Rolling Bass",
+        "Uplifting Arp",
+        "Hoover Blast",
+        "Anthem Chords",
+        "Offbeat Bass",
+        "Psy Bass",
+        "Trance Gate Keys",
+        "Euphoric Lead",
+        "Acid Roller",
+        "Deep House Chord",
+        "Organ Stab",
+        "Filtered Disco Bass",
+        "House Pluck",
+        "Jackin Bass",
+        "Warm Sub House",
+        "French Filter Lead",
+        "Garage Chord",
+        "Acid Screech",
+        "Rumble Bass",
+        "Industrial Stab",
+        "Detroit Strings",
+        "Bleep Lead",
+        "Dark Drone Bass",
+        "Hypnotic Arp",
+        "Techno Zap",
+        "Outrun Lead",
+        "Retro Brass",
+        "80s Poly Pad",
+        "Neon Arp",
+        "Chase Bass",
+        "Nightdrive Keys",
+        "Vice Lead",
+        "Retro Bell",
+        "Analog Horn",
+        "Miami Pad",
+        "Deep Drone",
+        "Tension Pulse",
+        "Sub Boom",
+        "Glass Atmosphere",
+        "Slow Riser",
+        "Dark Strings",
+        "Suspense Arp",
+        "Voice Pad",
+        "Riser",
+        "Downlifter",
+        "Laser Zap",
+        "Wind Noise",
+        "Siren",
+        "Robot Talk",
+        "Space Sweep",
+        "Impact Drone",
+        "Reese Bass",
+        "Pluck Bass",
+        "Wobble Bass",
+        "Square Lead",
+        "Sync-Style Lead",
+        "Clav Funk",
+        "Bell Piano",
+        "Warm Analog Pad",
+        "Evolving Pad",
+        "Deep Space",
+        "Frozen Lake",
+        "Hypersaw Anthem",
+        "Rave Pluck",
+        "Klub Lead",
+        "Big Room Stab",
+        "Gate Chords",
+        "Nu Trance Bass",
+        "Detuned Sweep",
+        "Festival Lead",
+        "Pumping Chords",
+        "Pumping Pluck",
+        "Wide Vox Lead",
+        "Hard Dance Stab"
+      ],
+      "note": "Host-automatable sound selection (issue #13). Factory names in program order; each machines user presets follow as \"<name> (user)\", discovered when the plugin instance is constructed. Not reachable over MIDI CC - see sapplink/PRESETS.md."
     }
   ],
   "presets": [
-    { "name": "Init", "program": 0 },
-    { "name": "Acid Bass", "program": 1 },
-    { "name": "Model Growl", "program": 2 },
-    { "name": "Taurus Rumble", "program": 3 },
-    { "name": "Velvet Bass", "program": 4 },
-    { "name": "Rubber Bass", "program": 5 },
-    { "name": "Fat Fifth Lead", "program": 6 },
-    { "name": "Lucky Lead", "program": 7 },
-    { "name": "Hoover Rave", "program": 8 },
-    { "name": "Whistle (Self-Osc)", "program": 9 },
-    { "name": "Silver Flute", "program": 10 },
-    { "name": "Solina Glide", "program": 11 },
-    { "name": "Juno Chorus Keys", "program": 12 },
-    { "name": "Vintage Organ", "program": 13 },
-    { "name": "Punchy Pluck", "program": 14 },
-    { "name": "Warm Brass", "program": 15 },
-    { "name": "Poly Comp Stab", "program": 16 },
-    { "name": "Church Organ", "program": 17 },
-    { "name": "FM E-Piano", "program": 18 },
-    { "name": "FM Bells", "program": 19 },
-    { "name": "Glass Clang", "program": 20 },
-    { "name": "Metal Drone", "program": 21 },
-    { "name": "Wurli Bite", "program": 22 },
-    { "name": "Sunken Bells", "program": 23 },
-    { "name": "Drift Pad", "program": 24 },
-    { "name": "Jupiter Sweep Pad", "program": 25 },
-    { "name": "PWM Strings", "program": 26 },
-    { "name": "Polysix Strings", "program": 27 },
-    { "name": "Super Saw Stack", "program": 28 },
-    { "name": "Tape Flute", "program": 29 },
-    { "name": "Glacier Pad", "program": 30 },
-    { "name": "Analog Choir", "program": 31 },
-    { "name": "Dark Cathedral", "program": 32 },
-    { "name": "Warm Tape Pad", "program": 33 },
-    { "name": "Widescreen", "program": 34 },
-    { "name": "Aurora Swell", "program": 35 },
-    { "name": "Shimmer Drift", "program": 36 },
-    { "name": "Evening Haze", "program": 37 },
-    { "name": "Slow Breath", "program": 38 },
-    { "name": "Static Field", "program": 39 },
-    { "name": "Hollow Reed", "program": 40 },
-    { "name": "Berlin School", "program": 41 },
-    { "name": "Disco Octaves", "program": 42 },
-    { "name": "Dream Cascade", "program": 43 },
-    { "name": "Neon Nights", "program": 44 },
-    { "name": "Crystal Run", "program": 45 },
-    { "name": "Midnight Train", "program": 46 },
-    { "name": "Pluck & Bloom", "program": 47 },
-    { "name": "Arcadia", "program": 48 },
-    { "name": "Harp Machine", "program": 49 },
-    { "name": "Berlin Sunrise", "program": 50 },
-    { "name": "Gamelan Steps", "program": 51 },
-    { "name": "Sequenced Acid", "program": 52 },
-    { "name": "Noise Ticker", "program": 53 },
-    { "name": "Steam Engine", "program": 54 },
-    { "name": "Perc Circuit", "program": 55 },
-    { "name": "Industrial Loom", "program": 56 },
-    { "name": "Rain on Tin", "program": 57 },
-    { "name": "Generative Dub", "program": 58 },
-    { "name": "Clockwork", "program": 59 },
-    { "name": "Ghost Snare", "program": 60 },
-    { "name": "Tidal Pulse", "program": 61 },
-    { "name": "Morse Static", "program": 62 },
-    { "name": "Ideal Mono Bass", "program": 63 },
-    { "name": "Analog DNA Mono Bass", "program": 64 },
-    { "name": "Warm Oscillator Lead", "program": 65 },
-    { "name": "Aging Poly Chords", "program": 66 },
-    { "name": "Voice Round-Robin Keys", "program": 67 },
-    { "name": "Driven Ladder Bass", "program": 68 },
-    { "name": "Soft Supply Pad", "program": 69 },
-    { "name": "Worn Calibration Brass", "program": 70 },
-    { "name": "Clean vs Saturated Seq", "program": 71 },
-    { "name": "Maximum DNA Demo", "program": 72 }
+    {
+      "program": 0,
+      "name": "Init"
+    },
+    {
+      "program": 1,
+      "name": "Acid Bass"
+    },
+    {
+      "program": 2,
+      "name": "Model Growl"
+    },
+    {
+      "program": 3,
+      "name": "Taurus Rumble"
+    },
+    {
+      "program": 4,
+      "name": "Velvet Bass"
+    },
+    {
+      "program": 5,
+      "name": "Rubber Bass"
+    },
+    {
+      "program": 6,
+      "name": "Fat Fifth Lead"
+    },
+    {
+      "program": 7,
+      "name": "Lucky Lead"
+    },
+    {
+      "program": 8,
+      "name": "Hoover Rave"
+    },
+    {
+      "program": 9,
+      "name": "Whistle (Self-Osc)"
+    },
+    {
+      "program": 10,
+      "name": "Silver Flute"
+    },
+    {
+      "program": 11,
+      "name": "Solina Glide"
+    },
+    {
+      "program": 12,
+      "name": "Juno Chorus Keys"
+    },
+    {
+      "program": 13,
+      "name": "Vintage Organ"
+    },
+    {
+      "program": 14,
+      "name": "Punchy Pluck"
+    },
+    {
+      "program": 15,
+      "name": "Warm Brass"
+    },
+    {
+      "program": 16,
+      "name": "Poly Comp Stab"
+    },
+    {
+      "program": 17,
+      "name": "Church Organ"
+    },
+    {
+      "program": 18,
+      "name": "FM E-Piano"
+    },
+    {
+      "program": 19,
+      "name": "FM Bells"
+    },
+    {
+      "program": 20,
+      "name": "Glass Clang"
+    },
+    {
+      "program": 21,
+      "name": "Metal Drone"
+    },
+    {
+      "program": 22,
+      "name": "Wurli Bite"
+    },
+    {
+      "program": 23,
+      "name": "Sunken Bells"
+    },
+    {
+      "program": 24,
+      "name": "Drift Pad"
+    },
+    {
+      "program": 25,
+      "name": "Jupiter Sweep Pad"
+    },
+    {
+      "program": 26,
+      "name": "PWM Strings"
+    },
+    {
+      "program": 27,
+      "name": "Polysix Strings"
+    },
+    {
+      "program": 28,
+      "name": "Super Saw Stack"
+    },
+    {
+      "program": 29,
+      "name": "Tape Flute"
+    },
+    {
+      "program": 30,
+      "name": "Glacier Pad"
+    },
+    {
+      "program": 31,
+      "name": "Analog Choir"
+    },
+    {
+      "program": 32,
+      "name": "Dark Cathedral"
+    },
+    {
+      "program": 33,
+      "name": "Warm Tape Pad"
+    },
+    {
+      "program": 34,
+      "name": "Widescreen"
+    },
+    {
+      "program": 35,
+      "name": "Aurora Swell"
+    },
+    {
+      "program": 36,
+      "name": "Shimmer Drift"
+    },
+    {
+      "program": 37,
+      "name": "Evening Haze"
+    },
+    {
+      "program": 38,
+      "name": "Slow Breath"
+    },
+    {
+      "program": 39,
+      "name": "Static Field"
+    },
+    {
+      "program": 40,
+      "name": "Hollow Reed"
+    },
+    {
+      "program": 41,
+      "name": "Berlin School"
+    },
+    {
+      "program": 42,
+      "name": "Disco Octaves"
+    },
+    {
+      "program": 43,
+      "name": "Dream Cascade"
+    },
+    {
+      "program": 44,
+      "name": "Neon Nights"
+    },
+    {
+      "program": 45,
+      "name": "Crystal Run"
+    },
+    {
+      "program": 46,
+      "name": "Midnight Train"
+    },
+    {
+      "program": 47,
+      "name": "Pluck & Bloom"
+    },
+    {
+      "program": 48,
+      "name": "Arcadia"
+    },
+    {
+      "program": 49,
+      "name": "Harp Machine"
+    },
+    {
+      "program": 50,
+      "name": "Berlin Sunrise"
+    },
+    {
+      "program": 51,
+      "name": "Gamelan Steps"
+    },
+    {
+      "program": 52,
+      "name": "Sequenced Acid"
+    },
+    {
+      "program": 53,
+      "name": "Noise Ticker"
+    },
+    {
+      "program": 54,
+      "name": "Steam Engine"
+    },
+    {
+      "program": 55,
+      "name": "Perc Circuit"
+    },
+    {
+      "program": 56,
+      "name": "Industrial Loom"
+    },
+    {
+      "program": 57,
+      "name": "Rain on Tin"
+    },
+    {
+      "program": 58,
+      "name": "Generative Dub"
+    },
+    {
+      "program": 59,
+      "name": "Clockwork"
+    },
+    {
+      "program": 60,
+      "name": "Ghost Snare"
+    },
+    {
+      "program": 61,
+      "name": "Tidal Pulse"
+    },
+    {
+      "program": 62,
+      "name": "Morse Static"
+    },
+    {
+      "program": 63,
+      "name": "Ideal Mono Bass"
+    },
+    {
+      "program": 64,
+      "name": "Analog DNA Mono Bass"
+    },
+    {
+      "program": 65,
+      "name": "Warm Oscillator Lead"
+    },
+    {
+      "program": 66,
+      "name": "Aging Poly Chords"
+    },
+    {
+      "program": 67,
+      "name": "Voice Round-Robin Keys"
+    },
+    {
+      "program": 68,
+      "name": "Driven Ladder Bass"
+    },
+    {
+      "program": 69,
+      "name": "Soft Supply Pad"
+    },
+    {
+      "program": 70,
+      "name": "Worn Calibration Brass"
+    },
+    {
+      "program": 71,
+      "name": "Clean vs Saturated Seq"
+    },
+    {
+      "program": 72,
+      "name": "Maximum DNA Demo"
+    },
+    {
+      "program": 73,
+      "name": "Ladder Lead"
+    },
+    {
+      "program": 74,
+      "name": "Model D Brass"
+    },
+    {
+      "program": 75,
+      "name": "Fat Mono Bass"
+    },
+    {
+      "program": 76,
+      "name": "Emerson Solo"
+    },
+    {
+      "program": 77,
+      "name": "Ladder Sub Bass"
+    },
+    {
+      "program": 78,
+      "name": "Portamento Lead"
+    },
+    {
+      "program": 79,
+      "name": "Filter Growl Bass"
+    },
+    {
+      "program": 80,
+      "name": "Woody Lead"
+    },
+    {
+      "program": 81,
+      "name": "Resonant Blip"
+    },
+    {
+      "program": 82,
+      "name": "Ladder Brass Stab"
+    },
+    {
+      "program": 83,
+      "name": "Bass Pedal"
+    },
+    {
+      "program": 84,
+      "name": "Screaming Lead"
+    },
+    {
+      "program": 85,
+      "name": "Jupiter Strings"
+    },
+    {
+      "program": 86,
+      "name": "Jupiter Brass"
+    },
+    {
+      "program": 87,
+      "name": "Prophet Poly"
+    },
+    {
+      "program": 88,
+      "name": "Juno Pad Classic"
+    },
+    {
+      "program": 89,
+      "name": "PWM Ensemble"
+    },
+    {
+      "program": 90,
+      "name": "Poly Stab"
+    },
+    {
+      "program": 91,
+      "name": "Poly Voices"
+    },
+    {
+      "program": 92,
+      "name": "Vintage Poly Keys"
+    },
+    {
+      "program": 93,
+      "name": "String Machine"
+    },
+    {
+      "program": 94,
+      "name": "Brass Section"
+    },
+    {
+      "program": 95,
+      "name": "Soft Poly Pad"
+    },
+    {
+      "program": 96,
+      "name": "Detuned Organ"
+    },
+    {
+      "program": 97,
+      "name": "DX Tine EP"
+    },
+    {
+      "program": 98,
+      "name": "FM Bell Keys"
+    },
+    {
+      "program": 99,
+      "name": "Glass Marimba"
+    },
+    {
+      "program": 100,
+      "name": "FM Bass Slap"
+    },
+    {
+      "program": 101,
+      "name": "Tubular Bell"
+    },
+    {
+      "program": 102,
+      "name": "FM Brass"
+    },
+    {
+      "program": 103,
+      "name": "Metal Pad"
+    },
+    {
+      "program": 104,
+      "name": "Digital Harp"
+    },
+    {
+      "program": 105,
+      "name": "FM Clav"
+    },
+    {
+      "program": 106,
+      "name": "Bell Pad"
+    },
+    {
+      "program": 107,
+      "name": "Wood Bass FM"
+    },
+    {
+      "program": 108,
+      "name": "FM Whistle"
+    },
+    {
+      "program": 109,
+      "name": "Supersaw Lead"
+    },
+    {
+      "program": 110,
+      "name": "Trance Pluck"
+    },
+    {
+      "program": 111,
+      "name": "Gated Trance Pad"
+    },
+    {
+      "program": 112,
+      "name": "Rolling Bass"
+    },
+    {
+      "program": 113,
+      "name": "Uplifting Arp"
+    },
+    {
+      "program": 114,
+      "name": "Hoover Blast"
+    },
+    {
+      "program": 115,
+      "name": "Anthem Chords"
+    },
+    {
+      "program": 116,
+      "name": "Offbeat Bass"
+    },
+    {
+      "program": 117,
+      "name": "Psy Bass"
+    },
+    {
+      "program": 118,
+      "name": "Trance Gate Keys"
+    },
+    {
+      "program": 119,
+      "name": "Euphoric Lead"
+    },
+    {
+      "program": 120,
+      "name": "Acid Roller"
+    },
+    {
+      "program": 121,
+      "name": "Deep House Chord"
+    },
+    {
+      "program": 122,
+      "name": "Organ Stab"
+    },
+    {
+      "program": 123,
+      "name": "Filtered Disco Bass"
+    },
+    {
+      "program": 124,
+      "name": "House Pluck"
+    },
+    {
+      "program": 125,
+      "name": "Jackin Bass"
+    },
+    {
+      "program": 126,
+      "name": "Warm Sub House"
+    },
+    {
+      "program": 127,
+      "name": "French Filter Lead"
+    },
+    {
+      "program": 128,
+      "name": "Garage Chord"
+    },
+    {
+      "program": 129,
+      "name": "Acid Screech"
+    },
+    {
+      "program": 130,
+      "name": "Rumble Bass"
+    },
+    {
+      "program": 131,
+      "name": "Industrial Stab"
+    },
+    {
+      "program": 132,
+      "name": "Detroit Strings"
+    },
+    {
+      "program": 133,
+      "name": "Bleep Lead"
+    },
+    {
+      "program": 134,
+      "name": "Dark Drone Bass"
+    },
+    {
+      "program": 135,
+      "name": "Hypnotic Arp"
+    },
+    {
+      "program": 136,
+      "name": "Techno Zap"
+    },
+    {
+      "program": 137,
+      "name": "Outrun Lead"
+    },
+    {
+      "program": 138,
+      "name": "Retro Brass"
+    },
+    {
+      "program": 139,
+      "name": "80s Poly Pad"
+    },
+    {
+      "program": 140,
+      "name": "Neon Arp"
+    },
+    {
+      "program": 141,
+      "name": "Chase Bass"
+    },
+    {
+      "program": 142,
+      "name": "Nightdrive Keys"
+    },
+    {
+      "program": 143,
+      "name": "Vice Lead"
+    },
+    {
+      "program": 144,
+      "name": "Retro Bell"
+    },
+    {
+      "program": 145,
+      "name": "Analog Horn"
+    },
+    {
+      "program": 146,
+      "name": "Miami Pad"
+    },
+    {
+      "program": 147,
+      "name": "Deep Drone"
+    },
+    {
+      "program": 148,
+      "name": "Tension Pulse"
+    },
+    {
+      "program": 149,
+      "name": "Sub Boom"
+    },
+    {
+      "program": 150,
+      "name": "Glass Atmosphere"
+    },
+    {
+      "program": 151,
+      "name": "Slow Riser"
+    },
+    {
+      "program": 152,
+      "name": "Dark Strings"
+    },
+    {
+      "program": 153,
+      "name": "Suspense Arp"
+    },
+    {
+      "program": 154,
+      "name": "Voice Pad"
+    },
+    {
+      "program": 155,
+      "name": "Riser"
+    },
+    {
+      "program": 156,
+      "name": "Downlifter"
+    },
+    {
+      "program": 157,
+      "name": "Laser Zap"
+    },
+    {
+      "program": 158,
+      "name": "Wind Noise"
+    },
+    {
+      "program": 159,
+      "name": "Siren"
+    },
+    {
+      "program": 160,
+      "name": "Robot Talk"
+    },
+    {
+      "program": 161,
+      "name": "Space Sweep"
+    },
+    {
+      "program": 162,
+      "name": "Impact Drone"
+    },
+    {
+      "program": 163,
+      "name": "Reese Bass"
+    },
+    {
+      "program": 164,
+      "name": "Pluck Bass"
+    },
+    {
+      "program": 165,
+      "name": "Wobble Bass"
+    },
+    {
+      "program": 166,
+      "name": "Square Lead"
+    },
+    {
+      "program": 167,
+      "name": "Sync-Style Lead"
+    },
+    {
+      "program": 168,
+      "name": "Clav Funk"
+    },
+    {
+      "program": 169,
+      "name": "Bell Piano"
+    },
+    {
+      "program": 170,
+      "name": "Warm Analog Pad"
+    },
+    {
+      "program": 171,
+      "name": "Evolving Pad"
+    },
+    {
+      "program": 172,
+      "name": "Deep Space"
+    },
+    {
+      "program": 173,
+      "name": "Frozen Lake"
+    },
+    {
+      "program": 174,
+      "name": "Hypersaw Anthem"
+    },
+    {
+      "program": 175,
+      "name": "Rave Pluck"
+    },
+    {
+      "program": 176,
+      "name": "Klub Lead"
+    },
+    {
+      "program": 177,
+      "name": "Big Room Stab"
+    },
+    {
+      "program": 178,
+      "name": "Gate Chords"
+    },
+    {
+      "program": 179,
+      "name": "Nu Trance Bass"
+    },
+    {
+      "program": 180,
+      "name": "Detuned Sweep"
+    },
+    {
+      "program": 181,
+      "name": "Festival Lead"
+    },
+    {
+      "program": 182,
+      "name": "Pumping Chords"
+    },
+    {
+      "program": 183,
+      "name": "Pumping Pluck"
+    },
+    {
+      "program": 184,
+      "name": "Wide Vox Lead"
+    },
+    {
+      "program": 185,
+      "name": "Hard Dance Stab"
+    }
   ],
   "articulations": []
 }

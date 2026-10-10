@@ -83,6 +83,9 @@ bool applyPresetValues(PatchState& patch, const std::vector<presets::Value>& val
         else if (same(id, p::arpRate))     patch.arpRateHz = v;
         else if (same(id, p::arpOctaves))  patch.arpOctaves = index;
         else if (same(id, p::arpGate))     patch.arpGate = v;
+        else if (same(id, p::lfoSync))     patch.lfoSync = index;
+        else if (same(id, p::arpSync))     patch.arpSync = index;
+        else if (same(id, p::delaySync))   patch.delaySync = index;
 
         else if (same(id, p::chorusMix))   patch.chorusMix = v;
         else if (same(id, p::chorusRate))  patch.chorusRateHz = v;
@@ -91,6 +94,10 @@ bool applyPresetValues(PatchState& patch, const std::vector<presets::Value>& val
         else if (same(id, p::delayMix))    patch.delayMix = v;
         else if (same(id, p::reverbSize))  patch.reverbSize = v;
         else if (same(id, p::reverbMix))   patch.reverbMix = v;
+        else if (same(id, p::reverbPredelay)) patch.reverbPredelayMs = v;
+        else if (same(id, p::reverbDamping)) patch.reverbDamping = v;
+        else if (same(id, p::reverbMod))   patch.reverbMod = v;
+        else if (same(id, p::reverbHiCut)) patch.reverbHiCutHz = v;
 
         else if (same(id, p::character))   patch.characterAmount = v;
         else if (same(id, p::dnaCondition))patch.dnaCondition = v;
@@ -150,11 +157,13 @@ const char* firstPatchDifference(const PatchState& a, const PatchState& b)
     SAPP_DIFF_F(lfoToPitchCents) SAPP_DIFF_F(lfoToCutoff)
     SAPP_DIFF_X(polyphony)
     SAPP_DIFF_X(arpMode) SAPP_DIFF_F(arpRateHz) SAPP_DIFF_X(arpOctaves) SAPP_DIFF_F(arpGate)
+    SAPP_DIFF_X(lfoSync) SAPP_DIFF_X(arpSync) SAPP_DIFF_X(delaySync)
     SAPP_DIFF_X(unisonCount) SAPP_DIFF_F(unisonDetuneCents)
     SAPP_DIFF_F(unisonSpread) SAPP_DIFF_F(glideSeconds)
     SAPP_DIFF_F(chorusMix) SAPP_DIFF_F(chorusRateHz)
     SAPP_DIFF_F(delayTimeS) SAPP_DIFF_F(delayFeedback) SAPP_DIFF_F(delayMix)
     SAPP_DIFF_F(reverbSize) SAPP_DIFF_F(reverbMix)
+    SAPP_DIFF_F(reverbPredelayMs) SAPP_DIFF_F(reverbDamping) SAPP_DIFF_F(reverbMod) SAPP_DIFF_F(reverbHiCutHz)
     SAPP_DIFF_F(characterAmount) SAPP_DIFF_F(driftAmountCents)
     SAPP_DIFF_F(driftSpeed) SAPP_DIFF_F(warmupAmount)
     SAPP_DIFF_F(dnaCondition) SAPP_DIFF_F(dnaCalibration) SAPP_DIFF_F(dnaWarmth)

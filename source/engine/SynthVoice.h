@@ -96,6 +96,19 @@ private:
 
     // dsp
     VCOModel osc1, osc2, sub;
+    // v0.3 SUPERSAW: unison members live INSIDE the voice card. Up to six
+    // extra band-limited oscillators track osc1 (same waveform, same pitch
+    // mods) at a JP-8000-style nonlinear detune spread, with random start
+    // phases, summed into osc1's slot of the mixer. Before, every unison
+    // member took a whole voice card, so a "7-voice supersaw" lead was one
+    // detuned, off-centre voice and a supersaw pad lost polyphony to its own
+    // stack.
+    static constexpr int kMaxUnisonExtras = 6;
+    std::array<BandLimitedOscillator, kMaxUnisonExtras> uniOsc {};
+    std::array<double, kMaxUnisonExtras> uniRatio {};
+    int uniExtras { 0 };
+    float uniMemberLevel { 0.0f };
+    float uniNorm { 1.0f };
     MixerModel mixer;
     DcBlocker dcBlocker;
     LadderFilter filter;

@@ -56,6 +56,9 @@ std::vector<ManifestRow> loadManifest(const std::string& path)
         ManifestRow row;
         row.id = grabString(obj, "id");
         row.curve = grabString(obj, "curve");
+        // Host parameters (the `preset` selector) carry an id but no CC —
+        // they are not part of the CC contract.
+        if (obj.find("\"cc\"") == std::string::npos) { pos = end; continue; }
         row.cc = std::stoi(obj.substr(obj.find(':', obj.find("\"cc\"")) + 1));
         const auto rangeStart = obj.find('[', obj.find("\"range\""));
         const auto comma = obj.find(',', rangeStart);
@@ -72,12 +75,16 @@ std::vector<ManifestRow> loadManifest(const std::string& path)
 TEST_CASE("SappLink table matches the vendored manifest exactly")
 {
     const auto rows = loadManifest(std::string(SAPPSYNTH_TEST_DATA_DIR) + "/sapplink-manifest.json");
-    REQUIRE(rows.size() == static_cast<std::size_t>(kNumMappings));
+    // `clean` (CC 3) is the suite-wide imperfection switch; the processor
+    // handles it directly (it SCALES the patch's character, it does not set
+    // a parameter), so it is the one manifest row with no table entry.
+    REQUIRE(rows.size() == static_cast<std::size_t>(kNumMappings) + 1);
 
     for (const auto& row : rows)
     {
         const auto* mapping = findMapping(row.cc);
         INFO("cc " << row.cc << " id " << row.id);
+        if (row.id == "clean") { REQUIRE(mapping == nullptr); continue; }
         REQUIRE(mapping != nullptr);
         REQUIRE(std::string(mapping->paramId) == row.id);
         REQUIRE(mapping->lo == row.lo);

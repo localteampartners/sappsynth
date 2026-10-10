@@ -161,3 +161,34 @@ TEST_CASE("Osc2 FM adds sidebands to a pure carrier")
     for (const float v : render(0.9f).left)
         REQUIRE(std::isfinite(v));
 }
+
+TEST_CASE("Arp sync follows the host tempo (v0.12)")
+{
+    auto onsetsAt = [](double bpm)
+    {
+        PatchState patch = arpPatch();
+        patch.arpMode = 1;        // Up
+        patch.arpSync = 4;        // 1/8 of the host tempo
+        patch.arpRateHz = 1.0f;   // ignored while synced
+        patch.polyphony = 8;
+        SynthEngine engine;
+        engine.setUnitSeed(3);
+        engine.setPatch(patch);
+        engine.prepare(48000.0, 256);
+        engine.setHostTempo(bpm);
+        std::vector<TimedEvent> events {
+            { 0.0, { Event::Type::NoteOn, 0, 60, 0.9f } },
+            { 0.0, { Event::Type::NoteOn, 0, 64, 0.9f } },
+            { 0.0, { Event::Type::NoteOn, 0, 67, 0.9f } },
+        };
+        const auto result = OfflineRenderer::render(engine, events, 2.0);
+        return countOnsets(result.left, 48000.0);
+    };
+    const int at120 = onsetsAt(120.0);   // eighths at 120 = 4 steps/s -> ~8 in 2 s
+    const int at180 = onsetsAt(180.0);   // 6 steps/s -> ~12
+    INFO("onsets at 120: " << at120 << ", at 180: " << at180);
+    REQUIRE(at120 >= 6);
+    REQUIRE(at120 <= 10);
+    REQUIRE(at180 >= 10);
+    REQUIRE(at180 <= 14);
+}

@@ -73,6 +73,32 @@ void SynthVoice::noteOn(int note, float velocity, std::uint64_t noteSeedValue,
     osc2.noteOn(noteVar_.phase01 + 0.37);
     sub.noteOn(0.0);
 
+    // Unison stack: members sit symmetrically around the played pitch on a
+    // nonlinear curve (bunched toward the centre, like the JP-8000 table) so
+    // the detune reads as one thick wave rather than a chord of seconds.
+    // Random start phases per member — the very thing a sampled supersaw
+    // cannot do twice.
+    const int count = std::clamp(patch.unisonCount, 1, kMaxUnisonExtras + 1);
+    uniExtras = count - 1;
+    uniMemberLevel = 0.35f + 0.65f * std::clamp(patch.unisonSpread, 0.0f, 1.0f);
+    for (int i = 0; i < uniExtras; ++i)
+    {
+        // positions: -1, +1, -0.5, +0.5, -0.75, +0.75  (pairs, outside in)
+        const float mag = i < 2 ? 1.0f : i < 4 ? 0.5f : 0.75f;
+        const float position = (i % 2 == 0 ? -1.0f : 1.0f) * mag;
+        const float cents = (position < 0.0f ? -1.0f : 1.0f)
+                          * std::pow(std::abs(position), 1.5f) * patch.unisonDetuneCents;
+        uniRatio[static_cast<std::size_t>(i)] = std::exp2(static_cast<double>(cents) / 1200.0);
+        uniOsc[static_cast<std::size_t>(i)].setMethod(OscillatorMethod::PolyBlep);
+        uniOsc[static_cast<std::size_t>(i)].reset(static_cast<double>(noiseRng.nextSigned()) * 0.5 + 0.5);
+    }
+    // Gain staging is structural (issue #2): a unison voice must not PEAK
+    // above a single voice, or a full-polyphony chord of a supersaw preset
+    // walks over the ceiling. Near-coherent normalisation (members do align
+    // for a few cycles at a time); the stack reads a little quieter than the
+    // lone oscillator in RMS terms, which is what a real stack does too.
+    uniNorm = 1.0f / (1.0f + static_cast<float>(uniExtras) * uniMemberLevel * 0.85f);
+
     // Note-on tolerances use the DNA static scale (master x condition).
     const float character = patch.characterAmount * (0.5f + 1.5f * patch.dnaCondition);
     const float envTol = scaledFactor(unit.envTimeFactor, character)
@@ -160,6 +186,8 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
 
     osc1.setWaveform(patch.osc1.waveform);
     osc2.setWaveform(patch.osc2.waveform);
+    for (int u = 0; u < uniExtras; ++u)
+        uniOsc[static_cast<std::size_t>(u)].setWaveform(patch.osc1.waveform);
     sub.setWaveform(patch.subWaveform);
     osc1.setTolerances(scaledOffset(profile_.osc1TuneCents, calib),
                        scaledOffset(profile_.osc1TrackError, calib));
@@ -213,7 +241,16 @@ void SynthVoice::renderChunk(float* left, float* right, int numSamples,
         // Osc2 renders first so it can frequency-modulate osc1 this sample.
         const float o2 = osc2.tick(pwm2);
         const float fmMult = 1.0f + patch.osc2ToOsc1Fm * 4.0f * o2;
-        const float o1 = osc1.tick(pwm, fmMult);
+        float o1 = osc1.tick(pwm, fmMult);
+        if (uniExtras > 0)
+        {
+            // the stack tracks osc1's pitch (mods, drift, glide included)
+            const double inc1 = osc1.phaseIncrement();
+            float stack = 0.0f;
+            for (int u = 0; u < uniExtras; ++u)
+                stack += uniOsc[static_cast<std::size_t>(u)].tick(inc1 * uniRatio[static_cast<std::size_t>(u)], pwm);
+            o1 = (o1 + uniMemberLevel * stack) * uniNorm;
+        }
         const float sb = sub.tick(0.5f);
         const float nz = noiseRng.nextSigned();
         signalBuf[static_cast<std::size_t>(i)] = mixer.weightedSum(o1, o2, sb, nz);

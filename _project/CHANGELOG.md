@@ -6,6 +6,49 @@ Newest first. Format: `## YYYY-MM-DD — short title`, then bullets.
 
 ---
 
+## 2026-10-09 — 0.12.0: a real supersaw, and a hall
+
+Michael, on the station: *"the instruments sound like they are on a middle
+school grade level... for space and soundscapes think M83 and Chicane."*
+Plan: `~/apps/sappaudio/MUSIC-QUALITY-PLAN.md` (A7, E1, E2 here).
+
+**This release changes the sound of every unison preset.** Nothing in it
+was listened to; every number is an offline measurement.
+
+- **Unison lives inside the voice card.** `VoiceManager::noteOn` used to
+  allocate one card PER UNISON MEMBER, so a 5-voice "supersaw" lead on an
+  8-voice patch was mono-ish and a supersaw pad stole its own notes after
+  two chords. A voice now renders osc1 plus up to six band-limited copies
+  (`SynthVoice::uniOsc`) on a nonlinear, centre-bunched detune spread with
+  random start phases, summed into osc1's mixer slot and PEAK-normalised
+  (structural staging, issue #2: a stack never peaks above a lone
+  oscillator). Unison is 1-7 now, costs no polyphony, and `Uni Spread` is
+  the members' level (stereo width comes from the chorus).
+- **The reverb is an 8-line FDN hall** (`dsp/effects/HallReverb.h`, ported
+  from sapporchestra's stage hall): Householder feedback, input diffusion,
+  per-line modulation, in-loop damping, a predelay and a wet hi-cut, with
+  tails from 0.6 s to 12 s. Four new parameters — `fx.reverb.predelay.ms`,
+  `fx.reverb.damping`, `fx.reverb.mod`, `fx.reverb.hicut.hz` — on SappLink
+  CC 17-20 next to unison on CC 14-16. Wet level is normalised against the
+  loop loss (measured: full wet within ±1 dB of dry across the whole Size
+  range), mix stays a crossfade. The Freeverb stays in the tree for the
+  gain-staging regression tests only.
+- **The bank was re-levelled by measurement** (`preset-audit --trims` →
+  `level_presets.py`, two passes): every preset peaks at -6 dBFS on the
+  eight-note chord through the new unison and hall. Perc Circuit still
+  cannot reach the target within the trim range (pre-existing).
+- **Tempo sync.** The synth reads the host's BPM (`SynthEngine::setHostTempo`,
+  from the playhead every block) and three new choice parameters —
+  `lfo.sync`, `arp.sync`, `fx.delay.sync` (Free, 1/1 … 1/16, triplets,
+  dotted; `engine/TempoSync.h`) — lock the LFO, the arpeggiator and the
+  delay to it. Free keeps the Hz / seconds values, so every preset is
+  unchanged until it asks.
+- **CC 3 `clean` is implemented.** The suite-wide imperfection switch
+  (sapptune issue #30) scales character, drift, warm-up, unit hiss and VCA
+  bleed by (1 - clean) together — at full clean a dirty patch renders
+  within a few percent of its designed-clean twin (test). The manifest
+  row needed no table entry; the processor handles it directly.
+
 ## 2026-08-11 — User presets stop capturing status readouts
 
 - `sapp::userpresets::capture()` now also skips `!isAutomatable()` parameters.

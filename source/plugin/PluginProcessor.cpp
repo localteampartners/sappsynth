@@ -181,6 +181,13 @@ void SappSynthProcessor::timerCallback()
 
 void SappSynthProcessor::handleSappLinkCc(int ccNumber, int ccValue)
 {
+    // CC 3 `clean` is not a parameter: it scales the patch's imperfection
+    // sources in the engine (sapptune issue #30), on the audio thread.
+    if (ccNumber == 3)
+    {
+        engine.setClean(static_cast<float>(ccValue) / 127.0f);
+        return;
+    }
     const auto* mapping = sapplink::findMapping(ccNumber);
     if (mapping == nullptr)
         return;
@@ -288,7 +295,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     layout.add(std::make_unique<P>(ID{p::lfoToCutoff, 1}, "LFO>Cutoff", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
 
     layout.add(std::make_unique<Pi>(ID{p::polyphony, 1}, "Polyphony", 1, 16, 8));
-    layout.add(std::make_unique<Pi>(ID{p::unisonCount, 1}, "Unison", 1, 5, 1));
+    layout.add(std::make_unique<Pi>(ID{p::unisonCount, 1}, "Unison", 1, 7, 1));
     layout.add(std::make_unique<P>(ID{p::unisonDetune, 1}, "Uni Detune",
                                    juce::NormalisableRange<float>(0.0f, 50.0f, 0.1f), 12.0f));
     layout.add(std::make_unique<P>(ID{p::unisonSpread, 1}, "Uni Spread", juce::NormalisableRange<float>(0.0f, 1.0f), 0.7f));
@@ -299,6 +306,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
                                     juce::StringArray { "Off", "Up", "Down", "UpDown", "Random" }, 0));
     layout.add(std::make_unique<P>(ID{p::arpRate, 1}, "Arp Rate", logRange(0.5f, 20.0f), 8.0f));
     layout.add(std::make_unique<Pi>(ID{p::arpOctaves, 1}, "Arp Octaves", 1, 3, 1));
+    const juce::StringArray syncNames { "Free", "1/1", "1/2", "1/4", "1/8", "1/16", "1/4T", "1/8T", "1/4D", "1/8D" };
+    layout.add(std::make_unique<Pc>(ID{p::lfoSync, 1}, "LFO Sync", syncNames, 0));
+    layout.add(std::make_unique<Pc>(ID{p::arpSync, 1}, "Arp Sync", syncNames, 0));
+    layout.add(std::make_unique<Pc>(ID{p::delaySync, 1}, "Delay Sync", syncNames, 0));
     layout.add(std::make_unique<P>(ID{p::arpGate, 1}, "Arp Gate",
                                    juce::NormalisableRange<float>(0.05f, 0.95f), 0.5f));
 
@@ -310,6 +321,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout SappSynthProcessor::createLa
     layout.add(std::make_unique<P>(ID{p::delayMix, 1}, "Delay", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
     layout.add(std::make_unique<P>(ID{p::reverbSize, 1}, "Verb Size", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
     layout.add(std::make_unique<P>(ID{p::reverbMix, 1}, "Reverb", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
+    layout.add(std::make_unique<P>(ID{p::reverbPredelay, 1}, "Verb Pre",
+                                   juce::NormalisableRange<float>(0.0f, 120.0f, 0.1f), 12.0f));
+    layout.add(std::make_unique<P>(ID{p::reverbDamping, 1}, "Verb Damp", juce::NormalisableRange<float>(0.0f, 1.0f), 0.45f));
+    layout.add(std::make_unique<P>(ID{p::reverbMod, 1}, "Verb Mod", juce::NormalisableRange<float>(0.0f, 1.0f), 0.35f));
+    layout.add(std::make_unique<P>(ID{p::reverbHiCut, 1}, "Verb HiCut",
+                                   juce::NormalisableRange<float>(1000.0f, 20000.0f, 1.0f, 0.4f), 9000.0f));
 
     layout.add(std::make_unique<P>(ID{p::character, 1}, "DNA Amount", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
     layout.add(std::make_unique<P>(ID{p::dnaCondition, 1}, "Condition", juce::NormalisableRange<float>(0.0f, 1.0f), 0.35f));
@@ -408,6 +425,9 @@ PatchState SappSynthProcessor::buildPatchFromParameters()
     patch.arpRateHz = value(p::arpRate);
     patch.arpOctaves = choice(p::arpOctaves);
     patch.arpGate = value(p::arpGate);
+    patch.lfoSync = choice(p::lfoSync);
+    patch.arpSync = choice(p::arpSync);
+    patch.delaySync = choice(p::delaySync);
 
     patch.chorusMix = value(p::chorusMix);
     patch.chorusRateHz = value(p::chorusRate);
@@ -416,6 +436,10 @@ PatchState SappSynthProcessor::buildPatchFromParameters()
     patch.delayMix = value(p::delayMix);
     patch.reverbSize = value(p::reverbSize);
     patch.reverbMix = value(p::reverbMix);
+    patch.reverbPredelayMs = value(p::reverbPredelay);
+    patch.reverbDamping = value(p::reverbDamping);
+    patch.reverbMod = value(p::reverbMod);
+    patch.reverbHiCutHz = value(p::reverbHiCut);
 
     patch.characterAmount = value(p::character);
     patch.dnaCondition = value(p::dnaCondition);
@@ -448,6 +472,12 @@ void SappSynthProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
 {
     juce::ScopedNoDenormals noDenormals;
     const int numSamples = buffer.getNumSamples();
+
+    // v0.12: the host's tempo drives the sync choices (engine/TempoSync.h).
+    if (auto* playHead = getPlayHead())
+        if (const auto position = playHead->getPosition())
+            if (const auto bpm = position->getBpm())
+                engine.setHostTempo(*bpm);
 
     keyboardState.processNextMidiBuffer(midi, 0, numSamples, true);
 

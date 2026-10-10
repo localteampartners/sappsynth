@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cstdint>
 #include "PatchState.h"
 #include "RenderContext.h"
@@ -9,7 +10,7 @@
 #include "../dsp/utility/SmoothedValue.h"
 #include "../dsp/effects/Chorus.h"
 #include "../dsp/effects/Delay.h"
-#include "../dsp/effects/Reverb.h"
+#include "../dsp/effects/HallReverb.h"
 #include "../telemetry/TelemetryBus.h"
 #include <atomic>
 
@@ -56,6 +57,19 @@ public:
     // Copy of the musical state; engine applies its own smoothing. Callable
     // from the audio thread (plain struct copy).
     void setPatch(const PatchState& patch);
+    /** SappLink CC 3 `clean`, 0..1: SCALES every modeled imperfection source
+        (character / DNA tolerances, drift, warm-up) toward zero. 0 = the
+        patch as designed. Issue sapptune#30 — the station's one switch. */
+    void setClean(float amount01) noexcept
+    {
+        clean_ = std::clamp(amount01, 0.0f, 1.0f);
+        effectivePatch_ = patch_;
+        applyClean(effectivePatch_);
+    }
+    float clean() const noexcept { return clean_; }
+    /** Host tempo for the sync choices (engine/TempoSync.h). Default 120. */
+    void setHostTempo(double bpm) noexcept { hostBpm_ = bpm > 20.0 ? bpm : hostBpm_; }
+    double hostTempo() const noexcept { return hostBpm_; }
 
     void process(const RenderBlock& block);
 
@@ -106,7 +120,7 @@ private:
     SharedModulation sharedMod {};
     Chorus chorus;
     StereoDelay delayFx;
-    Reverb reverbFx;
+    HallReverb reverbFx;
     int lastPlayedNote { -1 };
 
     SmoothedValue smCutoff, smResonance, smMixerDrive, smMaster;
@@ -129,6 +143,17 @@ private:
     RandomSource arpRng;
 
     double sr { 48000.0 };
+    double hostBpm_ { 120.0 };
+    float clean_ { 0.0f };
+    /** CC 3: every imperfection source scaled by (1 - clean), together. */
+    void applyClean(PatchState& p) const noexcept
+    {
+        if (clean_ <= 0.0f) return;
+        const float keep = 1.0f - clean_;
+        p.characterAmount *= keep;
+        p.driftAmountCents *= keep;
+        p.warmupAmount *= keep;
+    }
     QualityMode activeQuality { QualityMode::Normal };
     float outputDriveLinear { 1.0f };
     bool prepared { false };

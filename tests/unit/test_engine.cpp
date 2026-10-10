@@ -197,3 +197,31 @@ TEST_CASE("All notes off silences the engine")
     const int tailStart = static_cast<int>(result.left.size()) - 4800;
     REQUIRE(analyzer::rms(result.left.data() + tailStart, 4800) < 1e-4);
 }
+
+TEST_CASE("CC 3 clean scales the imperfection sources to the patch's own clean render (v0.12)")
+{
+    auto render = [](float clean, float character, float drift, float warmup)
+    {
+        PatchState patch = basicPatch();
+        patch.characterAmount = character;
+        patch.driftAmountCents = drift;
+        patch.warmupAmount = warmup;
+        SynthEngine engine;
+        engine.setUnitSeed(21);
+        engine.setPatch(patch);
+        engine.prepare(48000.0, 256);
+        engine.setClean(clean);
+        return OfflineRenderer::renderSingleNote(engine, 57, 0.8f, 0.6, 0.2);
+    };
+    const auto cleaned = render(1.0f, 1.0f, 8.0f, 1.0f);
+    const auto designedClean = render(0.0f, 0.0f, 0.0f, 0.0f);
+    const auto dirty = render(0.0f, 1.0f, 8.0f, 1.0f);
+    double diffClean = 0.0, diffDirty = 0.0;
+    for (std::size_t i = 0; i < cleaned.left.size(); ++i)
+    {
+        diffClean += std::abs(double(cleaned.left[i]) - double(designedClean.left[i]));
+        diffDirty += std::abs(double(dirty.left[i]) - double(designedClean.left[i]));
+    }
+    INFO("clean-vs-designed " << diffClean << " dirty-vs-designed " << diffDirty);
+    REQUIRE(diffClean < diffDirty * 0.05);
+}
